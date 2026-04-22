@@ -42,14 +42,18 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // 获取数据
-    async function fetchData() {
+async function fetchData() {
         try {
             const res = await fetch('/api/links');
             const data = await res.json();
+            console.log("拿到的数据是:", data); // <--- 添加这一行
             allLinks = data.links || [];
             categoryOrder = data.order || [];
             render();
-        } catch (e) { render(); }
+        } catch (e) { 
+            console.error("请求出错了:", e); // <--- 添加这一行
+            render(); 
+        }
     }
     fetchData();
 
