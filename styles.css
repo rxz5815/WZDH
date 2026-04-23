@@ -37,7 +37,7 @@ header h1 { text-align: center; font-weight: 300; font-size: 40px; color: #fffff
     background: rgba(15, 15, 15, 0.35); 
     backdrop-filter: blur(20px); 
     border-radius: 12px; 
-    margin: 40px 0; 
+    margin: 40px 0 80px 0;  /* 40px是上方间距，20px是下方间距 */
     border: 1px solid rgba(255,255,255,0.05); 
 }
 
@@ -46,9 +46,28 @@ header h1 { text-align: center; font-weight: 300; font-size: 40px; color: #fffff
 #category-ul a:hover { color: #fff !important; background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 
 /* 站点展示 */
-section { margin-top: 80px; }
-.category-title { border-left: 4px solid var(--red); padding-left: 12px; margin-bottom: 30px; font-weight: 500; font-size: 22px; }
-.link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 20px; }
+section { margin-top: 50px; } /* 分类间距调整 */
+.category-title { border-left: 4px solid var(--red); padding-left: 12px; margin-bottom: 20px; font-weight: 500; font-size: 22px; }
+
+/* 图标容器基础样式 */
+.link-grid {
+    display: grid !important; /* 必须有这行，否则图标会 100% 宽度 */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important; /* 必须有这行，否则不会横向排开 */
+    gap: 20px;
+    min-height: 5px; /* 侧边栏搜索栏下方间距 */
+    padding: 10px; 
+    margin-left: -10px;                                    
+    margin-right: -10px; 
+    border: 2px dashed transparent; 
+    transition: 全部 0.3s ease;
+}
+
+/* 当书签被拖拽到分类上方时触发的样式 */
+.link-grid.drag-over { 
+    background: rgba(79, 172, 254, 0.08) !important; /* 淡淡的背景色 */
+    border-color: var(--blue) !important;            /* 亮蓝色虚线边框窗口 */
+    transform: scale(1.01);                          /* 稍微放大一点增加反馈感 */
+}
 
 /* 站内搜索模式样式 */
 body.is-searching .category-title, body.is-searching #sticky-nav { display: none !important; }
@@ -69,7 +88,7 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
 /* 弹窗核心 */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; justify-content: center; align-items: center; }
 .modal-overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
-.modal-body { background: #1a1a1a; padding: 35px; border-radius: 24px; width: 90%; max-width: 440px; border: 1px solid #333; position: relative; z-index: 10; box-shadow: var(--shadow); }
+.modal-body { background: #1a1a1a; padding: 45px 35px 35px 35px;/* 侧边搜索框间距 */ border-radius: 24px; width: 90%; max-width: 440px; border: 1px solid #333; position: relative; z-index: 10; box-shadow: var(--shadow); }
 .modal-title-center { text-align: center !important; margin-bottom: 30px; font-weight: 500; font-size: 20px; display: block; width: 100%; }
 
 /* 编辑站点对齐 */
@@ -104,14 +123,42 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
 
 /* 搜索结果 */
 .search-modal-container { max-width: 600px; display: flex; flex-direction: column; max-height: 85vh; }
-#modal-results-area { flex: 1; overflow-y: auto; margin-top: 20px; padding-top: 15px; }
+#modal-results-area {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-top: 10px;
+
+  /* Firefox 美化 */
+  scrollbar-width: thin;
+  scrollbar-color: #999 transparent;
+}
+
+/* Chrome / Edge 美化（细、好看、不丑） */
+#modal-results-area::-webkit-scrollbar { width: 6px; }
+#modal-results-area::-webkit-scrollbar-track { background: transparent; }
+#modal-results-area::-webkit-scrollbar-thumb { background: #999; border-radius: 99px; }
 
 /* 保存按钮 */
 .save-btn-new { width: 100% !important; height: 52px !important; background: #333 !important; border: none !important; color: #fff !important; border-radius: 14px !important; font-weight: bold !important; cursor: pointer; margin-top: 10px; font-size: 16px; transition: 0.3s; }
 .save-btn-new:hover { background: var(--red) !important; transform: translateY(-4px); font-weight: 900; box-shadow: 0 5px 15px rgba(255, 77, 79, 0.4); }
 
 /* 分类管理 */
-.scroll-area { max-height: 50vh; overflow-y: auto; padding-right: 5px; }
+.scroll-area {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 5px;
+
+  /* Firefox 美化 */
+  scrollbar-width: thin;
+  scrollbar-color: #999 transparent;
+}
+
+/* Chrome / Edge 美化（细、好看、不丑） */
+
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-track { background: transparent; }
+.scroll-area::-webkit-scrollbar-thumb { background: #999; border-radius: 99px; }
 .cat-admin-row { display: flex; align-items: center; background: #222; padding: 12px; border-radius: 14px; margin-bottom: 12px; cursor: move; }
 
 /* --- 新增：修改三条杠颜色 --- */
@@ -119,7 +166,7 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
 
 .cat-admin-row input { background: transparent !important; border: none !important; flex: 1; color: #fff; font-size: 16px; height: auto !important; padding: 0 !important; }
 .row-btns { display: flex; gap: 8px; margin-left: 10px; }
-.btn-mini { padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; font-size: 12px; color: #fff; background: #444; }
+.btn-mini { padding: 5px 10px;/* --- 分类管理按纽大小 --- */ border-radius: 8px; border: none; cursor: pointer; font-size: 12px; color: #fff; background: #444; }
 .btn-mini.blue:hover { background: var(--blue); }
 .btn-mini.red:hover { background: var(--red); }
 
