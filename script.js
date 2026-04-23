@@ -82,23 +82,35 @@ async function fetchData() {
             sec.innerHTML = `<h2 class="category-title">${cat}</h2><div class="link-grid" data-cat="${cat}"></div>`;
             const grid = sec.querySelector('.link-grid');
             
-            // 绑定拖拽
-            grid.ondragover = e => { e.preventDefault(); grid.classList.add('drag-over'); };
-            grid.ondragleave = () => grid.classList.remove('drag-over');
-            grid.ondrop = async (e) => {
-                grid.classList.remove('drag-over');
+            // --- 只保留这一段即可，下面这一段是完全正确的 ---
+            grid.ondragover = function(e) {
+                e.preventDefault();
+                grid.classList.add('drag-over'); // 移入时显示虚线框
+
+            };
+            grid.ondragleave = function() {
+                grid.classList.remove('drag-over'); // 移出时隐藏
+            };
+            grid.ondrop = async function(e) {
+                grid.classList.remove('drag-over'); // 放下时隐藏
                 const url = e.dataTransfer.getData('text/plain');
                 const item = allLinks.find(l => l.url === url);
                 if(item && item.category !== cat) {
-                    item.category = cat; await apiReq('save', { link: item });
+                    item.category = cat;
+                    await apiReq('save', { link: item });
                 }
             };
+            // --- 拖拽逻辑结束 ---
 
-            (grouped[cat] || []).forEach(l => { grid.appendChild(createCard(l)); });
+            // 下面是渲染卡片的逻辑，不要删
+            (grouped[cat] || []).forEach(l => { 
+            grid.appendChild(createCard(l)); 
+            });
             main.appendChild(sec);
         });
     }
 
+            
     // 创建站点卡片
 function createCard(l) {
         const card = document.createElement('div');
