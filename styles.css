@@ -48,7 +48,7 @@ header h1 { text-align: center; font-weight: 300; font-size: 40px; color: #fffff
 /* 站点展示 */
 /* --- 找到 section 样式并添加 scroll-margin-top --- */
 section { 
-    margin-top: 80px; 
+    margin-top: 50px; 
     scroll-margin-top: 100px;    
     transition: 0.3s; 
 }
