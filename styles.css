@@ -46,7 +46,12 @@ header h1 { text-align: center; font-weight: 300; font-size: 40px; color: #fffff
 #category-ul a:hover { color: #fff !important; background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 
 /* 站点展示 */
-section { margin-top: 50px; } /* 分类间距调整 */
+/* --- 找到 section 样式并添加 scroll-margin-top --- */
+section { 
+    margin-top: 80px; 
+    scroll-margin-top: 100px;    
+    transition: 0.3s; 
+}
 .category-title { border-left: 4px solid var(--red); padding-left: 12px; margin-bottom: 20px; font-weight: 500; font-size: 22px; }
 
 /* 图标容器基础样式 */
