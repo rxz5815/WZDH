@@ -164,7 +164,7 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
 .scroll-area::-webkit-scrollbar { width: 6px; }
 .scroll-area::-webkit-scrollbar-track { background: transparent; }
 .scroll-area::-webkit-scrollbar-thumb { background: #999; border-radius: 99px; }
-.cat-admin-row { display: flex; align-items: center; background: #222; padding: 12px; border-radius: 14px; margin-bottom: 12px; cursor: move; }
+.cat-admin-row { display: flex; align-items: center; background: #222; padding: 1px 12px 1px 12px; border-radius: 14px; margin-bottom: 12px; cursor: move; }
 
 /* --- 新增：修改三条杠颜色 --- */
 .drag-handle { color: #555; margin-right: 12px; cursor: grab; }
@@ -222,4 +222,36 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
 /* 如果没有简介，则不显示气泡 */
 .link-card[data-desc=""]::after {
     display: none;
+}
+
+
+
+/* --- 编辑站点弹窗 3 行布局优化 --- */
+
+/* 第一行：标题和分类并排 */
+#in-title {
+    flex: 1 !important; /* 标题占据剩余所有空间 */
+    margin-bottom: 0 !important; /* 取消底部间距，因为这一行用的是 modal-row */
+}
+
+#cat-hint {
+    width: 130px !important; /* 分类下拉框固定宽度 */
+    flex: none !important;
+}
+
+/* 第二行：描述框 100% 宽度 */
+#in-desc.full-width-input {
+    width: 100% !important;
+    margin-bottom: 15px !important; /* 与下一行保持间距 */
+}
+
+/* 第三行：网址和图标并排（保持原样，但确保对齐） */
+#in-url {
+    flex: 1 !important;
+}
+
+/* 统一输入框的高度和圆角，确保 3 行看起来整齐 */
+.modern-modal input, .modern-modal select {
+    height: 50px !important;
+    border-radius: 12px !important;
 }
