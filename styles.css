@@ -270,3 +270,99 @@ body.is-searching .category-title, body.is-searching #sticky-nav { display: none
     border-left: 4px solid var(--blue) !important;
     transform: translateX(4px);
 }
+
+/* 高级页脚样式 */
+.advanced-footer {
+    margin-top: 60px;
+    position: relative;
+    z-index: 10;
+}
+
+/* 顶部渐变分割线：由深变亮再变深，非常有科技感 */
+.footer-divider {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    margin-bottom: 50px;
+}
+
+.footer-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* 品牌区 */
+.brand-logo {
+    font-size: 20px;
+    font-weight: 100; /* 加粗 */
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.9);
+
+}
+.footer-brand p {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 5px;
+    text-align: center;
+}
+
+/* 导航组 */
+.footer-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-group {
+    display: flex;
+    gap: 30px;
+}
+.nav-group a {
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.3s;
+    font-weight: 300;
+}
+.nav-group a:hover {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+/* 社交图标组 */
+.social-group {
+    display: flex;
+    gap: 20px;
+    font-size: 18px;
+}
+.social-group a {
+    color: rgba(255,255,255,0.3);
+    transition: 0.3s ease;
+}
+.social-group a:hover {
+    color: var(--blue); /* 悬停变蓝色 */
+    transform: translateY(-3px);
+}
+
+/* 版权区 */
+.footer-copyright {
+    margin-top: 10px;
+}
+.footer-copyright p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* 移动端适配 */
+@media (max-width: 100px) {
+    .nav-group {
+        gap: 15px;
+    }
+}
