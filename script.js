@@ -222,16 +222,27 @@ function createCard(l) {
         document.getElementById('modal-results-area').innerHTML = '';
     });
 
-    // 编辑站点
+// 编辑站点弹窗
     window.openEdit = (l = {}) => {
         document.getElementById('modal-link').style.display = 'flex';
-        document.getElementById('in-cat').value = l.category || '';
+        
+        // 1. 填充标题
         document.getElementById('in-title').value = (l.title === 'placeholder_hidden' ? '' : l.title) || '';
         
-        document.getElementById('in-desc').value = l.desc || ''; // 这是新增的内容
+        // 2. 填充描述
+        document.getElementById('in-desc').value = l.desc || '';
+        
+        // 3. 选中当前分类 (核心修改：现在通过下拉框反显分类)
+        // 如果是右键编辑，l.category 有值，下拉框会自动选中它
+        // 如果是点击添加，l.category 为空，下拉框会默认显示“选择分类”
+        document.getElementById('cat-hint').value = l.category || '';
+        
+        // 4. 填充网址
         const urlInput = document.getElementById('in-url');
         const prevImg = document.getElementById('prev-img');
         urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
+        
+        // 5. 图标处理
         if (l.icon && l.icon !== '') {
             prevImg.src = l.icon; prevImg.classList.add('loaded');
         } else {
@@ -287,13 +298,13 @@ function createCard(l) {
     }
 
     async function apiReq(action, data) {
-        let pwd = localStorage.getItem('auth_pwd_v9') || data.password || prompt("管理密码:");
+        let pwd = sessionStorage.getItem('auth_pwd_v9') || data.password || prompt("管理密码:");
         if(!pwd) return;
         const res = await fetch('/api/links', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ ...data, password: pwd, action })
         });
-        if(res.ok) { localStorage.setItem('auth_pwd_v9', pwd); fetchData(); return true; }
+        if(res.ok) { sessionStorage.setItem('auth_pwd_v9', pwd); fetchData(); return true; }
         return false;
     }
 
@@ -305,11 +316,21 @@ function createCard(l) {
         if(name) apiReq('addCategory', { newCategory: name }).then(() => document.getElementById('new-cat-input').value = '');
     };
 
-    document.getElementById('link-form').onsubmit = async function(e) {
+document.getElementById('link-form').onsubmit = async function(e) {
         e.preventDefault();
+        // FormData 会根据 HTML 中 input 和 select 的 name 属性自动打包数据
         const data = Object.fromEntries(new FormData(this));
+        
+        // 增加一个校验：如果没有选择分类，拦截提交
+        if (!data.category) {
+            alert("请选择一个分类！");
+            return;
+        }
+
         data.icon = document.getElementById('prev-img').src;
-        if(await apiReq('save', { link: data })) document.getElementById('modal-link').style.display='none';
+        if(await apiReq('save', { link: data })) {
+            document.getElementById('modal-link').style.display = 'none';
+        }
     };
 
     document.getElementById('btn-top').onclick = () => window.scrollTo({top:0, behavior:'smooth'});
