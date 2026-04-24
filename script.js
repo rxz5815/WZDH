@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let allLinks = [];
     let categoryOrder = [];
     let currentEngine = "https://www.baidu.com/s?wd=";
+    // 自动更新页脚年份
+    const yearEl = document.getElementById('current-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
 
     // 预设渐变色
     const grads = [
