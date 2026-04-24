@@ -13,9 +13,15 @@ export async function onRequest(context) {
 
   if (password !== env.EDIT_PASSWORD) return new Response('Unauthorized', { status: 401 });
 
-  // 处理排序更新
+  // --- 分类排序保存逻辑 ---
   if (action === 'updateOrder') {
     await env.LINKS_KV.put('category_order', JSON.stringify(order));
+    return new Response('OK', { status: 200 });
+  }
+
+  // 图标排序保存逻辑
+  if (action === 'updateLinksOrder') {
+    await env.LINKS_KV.put('all_links', JSON.stringify(link)); 
     return new Response('OK', { status: 200 });
   }
 
