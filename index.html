@@ -62,27 +62,22 @@
     </div>
   </div>
 
-  <!-- 编辑站点弹窗 (修复点 4: 像素级对齐结构) -->
-  <div class="modal" id="modal-link">
+  <!-- 编辑站点弹窗 -->
+<div class="modal" id="modal-link"> 
     <div class="modal-overlay"></div>
     <div class="modal-body modern-modal">
       <h3 class="modal-title-center">编辑站点</h3>
       <form id="link-form">
-        <!-- 管理密码：强制 100% 宽度 -->
-        <input type="password" name="password" id="main-pwd" placeholder="管理密码" class="full-width-input">
-        
-        <!-- 添加新分类行：左右对齐 -->
+        <!-- 第一行：站点标题 + 选择分类 -->
         <div class="modal-row custom-row-align">
-            <input type="text" name="category" id="in-cat" placeholder="新建分类" required>
-            <select id="cat-hint"></select>
+            <input type="text" name="title" id="in-title" placeholder="站点标题" style="flex: 1 !important;" required>
+            <select name="category" id="cat-hint" required></select>
         </div>
         
-        <!-- 站点标题：强制 100% 宽度 -->
-        <input 输入="text" name="title" id="in-title" placeholder="站点标题" class="full-width-input" required>
-        <input type="text" name="desc" id="in-desc" placeholder="站点描述" class="full-width-input">  <!-- 这是新增的内容 -->
-
+        <!-- 第二行：站点描述 -->
+        <input type="text" name="desc" id="in-desc" placeholder="站点描述" class="full-width-input">
         
-        <!-- 网址行：网址框 + 图标预览框 强制高度一致并左右对齐 -->
+        <!-- 第三行：网址 + 图标预览 -->
         <div class="modal-row custom-row-align">
             <input type="url" name="url" id="in-url" placeholder="https://..." required>
             <div class="icon-preview-box"><img id="prev-img" src=""></div>
@@ -91,7 +86,7 @@
         <button type="submit" class="save-btn-new">保存站点</button>
       </form>
     </div>
-  </div>
+</div>
 
   <!-- 分类管理弹窗 -->
   <div class="modal" id="modal-cat">
