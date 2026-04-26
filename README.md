@@ -31,7 +31,7 @@
 
 ### 2. 创建Cloudflare Pages项目
 
-1. 登录[Cloudflare Dashboard](https://dash.cloudflare.com/)（进入网站后，选简体中文）
+1. 登录[Cloudflare Dashboard](https://dash.cloudflare.com/)（进入网站后，语言选简体中文）
 2. 点击“计算”
 3. 点击“Workers 和 Pages”
 4. 点击“创建应用程序”
@@ -52,10 +52,11 @@
 
 ### 4. 绑定KV到Pages项目
 
-1. 回到Pages项目设置中,点击绑定（定义您名下 Pages Functions 可用的资源集）
-2. 选择"KV命名空间绑定"
-3. 点击"添加绑定"
-4. 变量名称设为"LINKS_KV",选择刚才创建的KV命名空间
+1. 回到Pages项目设置中
+2. 点击“绑定（定义您名下 Pages Functions 可用的资源集）”
+3. 选择"KV命名空间绑定"
+4. 点击"添加绑定"
+5. 变量名称设为"LINKS_KV",选择刚才创建的KV命名空间
 
 ### 5. 配置环境变量
 
