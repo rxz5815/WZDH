@@ -30,32 +30,29 @@
     <nav id="sticky-nav"><ul id="category-ul"></ul></nav>
     <main id="main-content"></main>
 
- <!-- 页脚部分 -->
-<footer class="advanced-footer">
-    <div class="footer-divider"></div>
-    <div class="footer-container">
-        <div class="footer-brand">
-            <span class="brand-logo">网站导航系统</span>
-            <p>构建你的私人导航站点</p>
-        </div>
-        
-        <div class="footer-nav">
-            <div class="nav-group">
-                <a href="#">隐私政策</a>
-                <a href="#">使用条款</a>
-                <a href="mailto:yourname@example.com">联系我们</a>
+    <footer class="advanced-footer">
+        <div class="footer-divider"></div>
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="brand-logo">网站导航系统</span>
+                <p>构建你的私人导航站点</p>
             </div>
-            <div class="social-group">
-                <a href="https://github.com/rxz5815/WZDH" target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fab fa-github"></i></a>
-                <a href="你的链接" target="_blank" rel="noopener noreferrer" title="WeChat"><i class="fab fa-weixin"></i></a>
+            <div class="footer-nav">
+                <div class="nav-group">
+                    <a href="#">隐私政策</a>
+                    <a href="#">使用条款</a>
+                    <a href="mailto:yourname@example.com">联系我们</a>
+                </div>
+                <div class="social-group">
+                    <a href="https://github.com/rxz5815/WZDH" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i></a>
+                    <a href="#"><i class="fab fa-weixin"></i></a>
+                </div>
+            </div>
+            <div class="footer-copyright">
+                <p>&copy; <span id="current-year"></span> 网站导航系统. Designed for Efficiency.</p>
             </div>
         </div>
-
-        <div class="footer-copyright">
-            <p>&copy; <span id="current-year"></span> 网站导航系统. Designed for Efficiency.</p>
-        </div>
-    </div>
-</footer>
+    </footer>
   </div>
 
   <div class="side-tools">
@@ -90,30 +87,33 @@
   </div>
 
   <!-- 编辑站点弹窗 -->
-<div class="modal" id="modal-link"> 
+  <div class="modal" id="modal-link"> 
     <div class="modal-overlay"></div>
     <div class="modal-body modern-modal">
       <h3 class="modal-title-center">编辑站点</h3>
       <form id="link-form">
-        <!-- 第一行：站点标题 + 选择分类 -->
-        <div class="modal-row custom-row-align">
-            <input type="text" name="title" id="in-title" placeholder="站点标题" style="flex: 1 !important;" required>
-            <select name="category" id="cat-hint" required></select>
+        <input type="text" name="title" id="in-title" placeholder="站点标题" class="full-width-input" required>
+        
+        <div class="modal-row">
+            <select name="category" id="cat-hint" style="flex:1;" required>
+                <option value="">选择大分类</option>
+            </select>
+            <select name="subCategory" id="sub-cat-hint" style="flex:1;">
+                <option value="">选择二级小类</option>
+            </select>
         </div>
         
-        <!-- 第二行：站点描述 -->
         <input type="text" name="desc" id="in-desc" placeholder="站点描述" class="full-width-input">
         
-        <!-- 第三行：网址 + 图标预览 -->
-        <div class="modal-row custom-row-align">
-            <input type="url" name="url" id="in-url" placeholder="https://..." required>
+        <div class="modal-row">
+            <input type="url" name="url" id="in-url" placeholder="https://..." style="flex:1;" required>
             <div class="icon-preview-box"><img id="prev-img" src=""></div>
         </div>
         
         <button type="submit" class="save-btn-new">保存站点</button>
       </form>
     </div>
-</div>
+  </div>
 
   <!-- 分类管理弹窗 -->
   <div class="modal" id="modal-cat">
