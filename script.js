@@ -8,12 +8,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
     const grads = [
-        'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
-        'linear-gradient(135deg, #202124 0%, #3c4043 100%)', 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 80%)',
-        'linear-gradient(45deg, #3d2b56 0%, #8e54e9 80%)', 'linear-gradient(135deg, #283048 0%, #859398 80%)',
-        'linear-gradient(45deg, #1e2a38 0%, #5a7fa5 80%)', 'linear-gradient(135deg, #192841 0%, #607d8b 80%)',
-        'linear-gradient(45deg, #271f30 0%, #7b4397 80%)', 'linear-gradient(135deg, #182c39 0%, #486a78 80%)',
-        'linear-gradient(45deg, #221d2e 0%, #614e77 80%)', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        'linear-gradient(to right, #667db6,#0082c8,#667db6)',
+        'linear-gradient(to right, #373b44,#4286f4)',
+        'linear-gradient(to right, #355c7d,#6c5b7b,#c06c84)',
+        'linear-gradient(to right, #0f0c29,#302b63,#24243e)',
+        'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', 
+        'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
+        'linear-gradient(135deg, #202124 0%, #3c4043 100%)', 
+        'linear-gradient(135deg, #2c3e50 0%, #4ca1af 80%)',
+        'linear-gradient(45deg, #3d2b56 0%, #8e54e9 80%)', 
+        'linear-gradient(135deg, #283048 0%, #859398 80%)',
+        'linear-gradient(45deg, #1e2a38 0%, #5a7fa5 80%)', 
+        'linear-gradient(135deg, #192841 0%, #607d8b 80%)',
+        'linear-gradient(45deg, #271f30 0%, #7b4397 80%)', 
+        'linear-gradient(135deg, #182c39 0%, #486a78 80%)',
+        'linear-gradient(45deg, #221d2e 0%, #614e77 80%)', 
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     ];
 
     const updateBg = (val, save = true) => {
@@ -101,17 +111,25 @@ document.addEventListener('DOMContentLoaded', function() {
             sec.innerHTML = `<div class="category-header"><h2 class="category-title">${cat}</h2>${subFilterHtml}</div><div class="link-grid" data-cat="${cat}" data-sub="${currentSub}"></div>`;
             const grid = sec.querySelector('.link-grid');
             
+// 绑定子分类切换逻辑：支持点击 + 鼠标划过
             sec.querySelectorAll('.sub-cat-item').forEach(item => {
-                item.onclick = () => {
+                const switchSub = () => {
                     const subTarget = item.dataset.sub;
-                    activeSubFilters[cat] = subTarget;
+                    // 如果已经是当前选中的，则不重复执行，防止闪烁
+                    if (activeSubFilters[cat] === subTarget && item.classList.contains('active')) return;
+
+                    activeSubFilters[cat] = subTarget; 
                     sec.querySelectorAll('.sub-cat-item').forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
                     grid.dataset.sub = subTarget;
+    
                     grid.querySelectorAll('.link-card').forEach(card => {
                         card.style.display = (subTarget === 'all' || card.dataset.sub === subTarget) ? '' : 'none';
                     });
                 };
+
+                item.onclick = switchSub;      // 保留点击，兼容移动端
+                item.onmouseenter = switchSub; // 核心优化：鼠标移入即触发切换
             });
 
             grid.ondragover = e => { e.preventDefault(); grid.classList.add('drag-over'); };
