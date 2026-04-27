@@ -285,7 +285,7 @@ card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
         try {
             const domain = new URL(val).hostname;
-            const iconUrl = `https://api.iowen.cn/favicon/${domain}.png`;
+            const iconUrl = `https://api.iowen.cn/favicon/${domain}.ico`;
             const tempImg = new Image(); tempImg.src = iconUrl;
             tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
             tempImg.onerror = () => { prevImg.src = ''; prevImg.classList.remove('loaded'); };
