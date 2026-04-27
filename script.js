@@ -180,9 +180,12 @@ const safeIcon = `https://favicon.im/${l.url}`;
 
 card.innerHTML = `
     <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+
+// 注意：这里的 ${domain} 必须在上面已经定义过
+card.innerHTML = `
+    <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
     <img src="${safeIcon}" onerror="this.onerror=null;this.src='https://api.iowen.cn/favicon/${domain}.png';">
     <h3>${l.title}</h3>`;
-
         
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
