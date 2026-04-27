@@ -223,13 +223,16 @@ function createCard(l) {
     `;
 
     const img = card.querySelector('.site-icon');
-    
+
     // 图标处理函数：判断是否为全球通用API
     const saveIfGlobal = (url) => {
         const globalAPIs = ['favicon.im', 'vemetric.com', 'favicon.is', 'faviconsnap.com'];
-        if (globalAPIs.some(api => url.includes(api))) {
+        // 修改点：增加一个判断，只有 sessionStorage 里有密码（管理员）才执行保存
+        const isAdmin = !!sessionStorage.getItem('auth_pwd_v9');
+        
+        if (isAdmin && globalAPIs.some(api => url.includes(api))) {
             l.icon = url;
-            apiReq('save', { link: l }, true); // 静默保存
+            apiReq('save', { link: l }, true); // 这里的 true 确保是静默保存
         }
     };
 
@@ -258,7 +261,7 @@ function createCard(l) {
         card.ondragover = e => { e.preventDefault(); if (document.querySelector('.dragging') !== card) card.classList.add('drag-insert-before'); };
         card.ondragleave = () => card.classList.remove('drag-insert-before');
 
-        card.ondrop = async (e) => {
+card.ondrop = async (e) => {
             e.preventDefault(); e.stopPropagation();
             card.classList.remove('drag-insert-before');
             const draggedUrl = e.dataTransfer.getData('text/plain');
@@ -266,15 +269,18 @@ function createCard(l) {
             const draggedIdx = allLinks.findIndex(x => x.url === draggedUrl);
             if (draggedIdx === -1) return;
             const item = allLinks.splice(draggedIdx, 1)[0];
-            const oldCat = item.category;
+            item.category = l.category;
             const grid = card.closest('.link-grid');
             const currentSub = grid.dataset.sub;
-            item.category = l.category;
             if (currentSub !== 'all') item.subCategory = currentSub;
-            else if (oldCat !== l.category) item.subCategory = "";
             const newTargetIdx = allLinks.findIndex(x => x.url === l.url);
             allLinks.splice(newTargetIdx, 0, item);
-            render(); apiReq('updateLinksOrder', { link: allLinks }, true);
+            
+            render(); 
+            // 修改点：确保拖拽排序的保存优先级最高，且不被图标修复请求淹没
+            setTimeout(() => {
+                apiReq('updateLinksOrder', { link: allLinks }, true);
+            }, 100); 
         };
         return card;
     }
@@ -462,12 +468,35 @@ function renderCatAdmin() {
         });
     }
 
-    async function apiReq(action, data, noRefresh = false) {
-        let pwd = sessionStorage.getItem('auth_pwd_v9') || prompt("管理密码:");
+async function apiReq(action, data, noRefresh = false) {
+        // 修改点：不再主动弹窗，而是先看有没有存下的密码
+        let pwd = sessionStorage.getItem('auth_pwd_v9');
+        
+        // 如果没有密码且不是静默操作（比如是手动点删除/改名），才弹窗问
+        if(!pwd && !noRefresh) {
+            pwd = prompt("管理密码:");
+        }
+        
         if(!pwd) return false;
-        const res = await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ...data, password: pwd, action }) });
-        if(res.ok) { sessionStorage.setItem('auth_pwd_v9', pwd); if(!noRefresh) await fetchData(); return true; }
-        if(res.status === 401) { alert("密码错误！"); sessionStorage.removeItem('auth_pwd_v9'); }
+
+        try {
+            const res = await fetch('/api/links', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ ...data, password: pwd, action }) 
+            });
+            
+            if(res.ok) { 
+                sessionStorage.setItem('auth_pwd_v9', pwd); 
+                if(!noRefresh) await fetchData(); 
+                return true; 
+            }
+            if(res.status === 401) { 
+                // 只有手动操作失败才提醒密码错误
+                if(!noRefresh) alert("密码错误！"); 
+                sessionStorage.removeItem('auth_pwd_v9'); 
+            }
+        } catch(e) { console.error(e); }
         return false;
     }
 
