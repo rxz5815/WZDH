@@ -174,11 +174,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (l.desc) card.setAttribute('data-desc', l.desc);
         
 // 自动将旧数据中的谷歌链接替换为国内接口，并设置国内备用地址
-const safeIcon = (l.icon && l.icon.includes('google.com')) 
-    ? `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png` 
-    : (l.icon || `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png`);
+const domain = new URL(l.url).hostname;
+// 使用高清组合：首选 favicon.im (国外高清支持好)，如果失败在 img 标签里处理
+const safeIcon = `https://favicon.im/${l.url}`;
 
-card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${safeIcon}" onerror="this.src='https://favicon.im/${l.url}'"><h3>${l.title}</h3>`;
+card.innerHTML = `
+    <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+    <img src="${safeIcon}" onerror="this.onerror=null;this.src='https://api.iowen.cn/favicon/${domain}.png';">
+    <h3>${l.title}</h3>`;
 
         
         card.onclick = () => window.open(l.url, '_blank');
@@ -289,27 +292,29 @@ if (displayIcon && displayIcon !== '') { prevImg.src = displayIcon; prevImg.clas
 else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
 
-    document.getElementById('in-url').oninput = function() {
+document.getElementById('in-url').oninput = function() {
         const val = this.value.trim();
         const prevImg = document.getElementById('prev-img');
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
-
-        
-try {
-    const domain = new URL(val).hostname;
-    // 更换为国内知名的 iowen 接口
-    const iconUrl = `https://api.iowen.cn/favicon/${domain}.png`;
-    const tempImg = new Image(); tempImg.src = iconUrl;
-    tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
-    tempImg.onerror = () => { 
-        // 第一个失败后，尝试第二个国内可访问的 favicon.im 接口
-        prevImg.src = `https://favicon.im/${val}`; 
-        prevImg.classList.add('loaded');
+        try {
+            const domain = new URL(val).hostname;
+            // 1. 预览首选高清接口
+            const iconUrl = `https://favicon.im/${val}`;
+            const tempImg = new Image(); 
+            tempImg.src = iconUrl;
+            tempImg.onload = () => { 
+                prevImg.src = iconUrl; 
+                prevImg.classList.add('loaded'); 
+            };
+            tempImg.onerror = () => { 
+                // 2. 高清加载失败（或超时），保底使用国内 iowen 接口
+                const fallbackUrl = `https://api.iowen.cn/favicon/${domain}.png`;
+                prevImg.src = fallbackUrl;
+                prevImg.classList.add('loaded');
+            };
+        } catch (e) { }
     };
-} catch (e) { }
 
-        
-    };
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
 
