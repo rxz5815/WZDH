@@ -212,8 +212,9 @@ function createCard(l) {
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
 
-        // 初始化：如果已有图标且不是谷歌的，用旧的；否则先用地球占位
-        const initialIcon = (l.icon && !l.icon.includes('google.com')) ? l.icon : GLOBE_ICON;
+        // [优化] 如果地址是空的或者是谷歌的，直接给小地球，不给浏览器“转圈”的机会
+        const isGoogle = !l.icon || l.icon.includes('google.com');
+        const initialIcon = isGoogle ? GLOBE_ICON : l.icon;
         
         card.innerHTML = `
             <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
@@ -223,15 +224,30 @@ function createCard(l) {
 
         const img = card.querySelector('.site-icon');
         
-        // 核心逻辑：如果图片加载失败，触发智能并联抓取
+        // [核心] 这里的逻辑负责：如果图片挂了，立即竞速抓取并【永久保存】到数据库
         img.onerror = async function() {
-            if (this.src === GLOBE_ICON) return;
-            this.src = await getSmartIcon(l.url);
+            if (this.src === GLOBE_ICON) return; 
+            const betterIcon = await getSmartIcon(l.url);
+            if (betterIcon && betterIcon !== GLOBE_ICON) {
+                this.src = betterIcon;
+                l.icon = betterIcon;
+                // 静默保存到数据库，以后再访问就不用竞速了
+                apiReq('save', { link: l }, true); 
+            } else {
+                this.src = GLOBE_ICON;
+            }
         };
 
-        // 如果是新站或原本存的是谷歌图标，主动跑一次并联抓取来更新清晰度
-        if (!l.icon || l.icon.includes('google.com')) {
-            getSmartIcon(l.url).then(iconUrl => { if(iconUrl) img.src = iconUrl; });
+        // [核心] 如果原本是谷歌链接，主动跑一次竞速，把它换成高清国内可访问的地址
+        if (isGoogle) {
+            getSmartIcon(l.url).then(iconUrl => {
+                if (iconUrl && iconUrl !== GLOBE_ICON) {
+                    img.src = iconUrl;
+                    l.icon = iconUrl;
+                    // 静默保存，下次刷新不再转圈
+                    apiReq('save', { link: l }, true); 
+                }
+            });
         }
 
         card.onclick = () => window.open(l.url, '_blank');
