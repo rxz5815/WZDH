@@ -328,7 +328,7 @@ function renderCatAdmin() {
                 </div>`;
             
             row.ondragstart = (e) => { e.dataTransfer.setData('cat-idx', idx); row.style.opacity = '0.5'; };
-            row。ondragend = () => row.style.opacity = '1';
+            row.ondragend = () => row.style.opacity = '1';
             row.ondragover = e => e.preventDefault();
             row.ondrop = async (e) => {
                 e.preventDefault();
