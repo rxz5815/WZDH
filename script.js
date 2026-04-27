@@ -167,25 +167,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function createCard(l) {
+function createCard(l) {
         const card = document.createElement('div');
         card.className = 'link-card'; card.draggable = true;
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
         
-// 自动将旧数据中的谷歌链接替换为国内接口，并设置国内备用地址
-const domain = new URL(l.url).hostname;
-// 使用高清组合：首选 favicon.im (国外高清支持好)，如果失败在 img 标签里处理
-const safeIcon = `https://favicon.im/${l.url}`;
+        // 1. 定义域名
+        const domain = new URL(l.url).hostname;
+        // 2. 首选高清接口
+        const safeIcon = `https://favicon.im/${l.url}`;
 
-card.innerHTML = `
-    <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
-
-// 注意：这里的 ${domain} 必须在上面已经定义过
-card.innerHTML = `
-    <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
-    <img src="${safeIcon}" onerror="this.onerror=null;this.src='https://api.iowen.cn/favicon/${domain}.png';">
-    <h3>${l.title}</h3>`;
+        // 3. 渲染 HTML (onerror 指向国内 iowen 彩色地球保底)
+        card.innerHTML = `
+            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+            <img src="${safeIcon}" onerror="this.onerror=null;this.src='https://api.iowen.cn/favicon/${domain}.png';">
+            <h3>${l.title}</h3>`;
         
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
