@@ -127,22 +127,19 @@ async function fetchData() {
                 const idx = allLinks.findIndex(l => l.url === url);
                 if (idx > -1) {
 
-const item = allLinks.splice(idx, 1)[0];
-const oldCat = item.category; // 记录旧的大类
-item.category = cat;         // 赋予目标大类
-const sub = grid.dataset.sub; // 获取目标视图状态
+                const item = allLinks.splice(idx, 1)[0];
+                    const oldCat = item.category; 
+                    item.category = cat;         
+                    const sub = grid.dataset.sub; 
 
-if (sub !== 'all') {
-    // 逻辑 A：如果拖进的是具体的子分类视图（如 B3），强制变成该子分类
-    item.subCategory = sub;
-} else {
-    // 逻辑 B：如果拖进的是“全部”视图
-    if (oldCat !== cat) {
-        // 只有跨了大类（从 A 拖到 B），才清空子分类，确保数据干净
-        item.subCategory = "";
-    }
-    // 如果是在同一个大类下的“全部”视图里挪动，则保留它原有的子分类属性（仅作排序）
-}
+                    if (sub !== 'all') {
+                        // 场景1：拖进具体的子分类（如 B3），无论从哪来，都变 B3
+                        item.subCategory = sub;
+                    } else if (oldCat !== cat) {
+                        // 场景2：跨了大类拖进“全部”视图，必须清除子分类，防止数据错乱
+                        item.subCategory = "";
+                    }
+                    // 场景3：同大类内“全部”视图拖动，保留原 subCategory，只改排序
                     
                     let ins = -1;
                     for (let i = allLinks.length - 1; i >= 0; i--) { if (allLinks[i].category === cat && (sub === 'all' || allLinks[i].subCategory === sub)) { ins = i + 1; break; } }
@@ -203,22 +200,20 @@ if (sub !== 'all') {
             const idx = allLinks.findIndex(x => x.url === dragUrl);
             if (idx === -1) return;
             
-const item = allLinks.splice(idx, 1)[0];
-const oldCat = item.category;           // 记录旧大类
-const targetCat = l.category;           // 目标卡片所属的大类
-const grid = card.closest('.link-grid');
-const sub = grid.dataset.sub;           // 目标视图状态
+            const item = allLinks.splice(idx, 1)[0];
+            const oldCat = item.category;           
+            const targetCat = l.category;           
+            const grid = card.closest('.link-grid');
+            const sub = grid.dataset.sub;           
 
-item.category = targetCat;              // 赋予新大类
-if (sub !== 'all') {
-    // 逻辑 A：如果在子分类视图下操作，更新子分类
-    item.subCategory = sub;
-} else {
-    // 逻辑 B：如果在“全部”视图下跨大类移动，清空子分类
-    if (oldCat !== targetCat) {
-        item.subCategory = "";
-    }
-}
+            item.category = targetCat;              
+            if (sub !== 'all') {
+                // 拖到 B3 分类下的某个卡片上，站点变 B3
+                item.subCategory = sub;
+            } else if (oldCat !== targetCat) {
+                // 拖到 B 大类“全部”视图的某个卡片上，清空子分类
+                item.subCategory = "";
+            }
             
             allLinks.splice(allLinks.findIndex(x => x.url === l.url), 0, item);
             render(); 
@@ -250,15 +245,33 @@ if (sub !== 'all') {
     document.body.addEventListener('click', e => { if(e.target.classList.contains('engine')) { document.querySelectorAll('.engine').forEach(x => x.classList.remove('active')); e.target.classList.add('active'); currentEngine = e.target.dataset.url; } });
     document.querySelectorAll('.modal-overlay').forEach(el => el.onclick = () => { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); document.getElementById('modal-results-area').innerHTML = ''; });
 
-    window.openEdit = (l = {}) => {
-        document.getElementById('modal-link').style.display = 'flex';
-        document.getElementById('in-title').value = (l.title === 'placeholder_hidden' ? '' : l.title) || '';
+window.openEdit = (l = {}) => {
+        const modal = document.getElementById('modal-link');
+        modal.style.display = 'flex';
+
+        // 1. 动态改标题：判断是“添加”还是“编辑”
+        const isEdit = l.title && l.title !== 'placeholder_hidden';
+        modal.querySelector('.modal-title-center').textContent = isEdit ? "编辑站点" : "添加站点";
+
+        // 2. 填充内容
+        document.getElementById('in-title').value = isEdit ? l.title : '';
         document.getElementById('in-desc').value = l.desc || '';
-        document.getElementById('cat-hint').value = l.category || '';
+        
+        // 3. 核心：强制触发分类联动，确保小分类下拉框有数据
+        const catSelect = document.getElementById('cat-hint');
+        catSelect.value = l.category || '';
         updateSubCatDropdown(l.category || '', l.subCategory || '');
+        
         const urlInput = document.getElementById('in-url'), prevImg = document.getElementById('prev-img');
-        urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
-        if (l.icon) { prevImg.src = l.icon; prevImg.classList.add('loaded'); } else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
+        urlInput.value = (l.url && !l.url.includes('placeholder')) ? l.url : '';
+        
+        if (l.icon) { 
+            prevImg.src = l.icon; 
+            prevImg.classList.add('loaded'); 
+        } else { 
+            prevImg.src = ''; 
+            prevImg.classList.remove('loaded'); 
+        }
     };
     function updateSubCatDropdown(catName, selectedSub = "") {
         const subCatHint = document.getElementById('sub-cat-hint');
