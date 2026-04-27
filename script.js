@@ -7,6 +7,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const yearEl = document.getElementById('current-year');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+    // --- [1. 新增：SVG小地球图标 (Base64) 和 智能抓取函数] ---
+    const GLOBE_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7.06-3.6-7.55-7.55H5.4c.45 2.13 2.11 3.84 4.25 4.3l.35 3.25zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm6.65-5.35c-.49 3.95-3.6 7.06-7.55 7.55l.35-3.25c2.14-.46 3.8-2.17 4.25-4.3h2.95zM4.45 11.45c.49-3.95 3.6-7.06 7.55-7.55l-.35 3.25c-2.14.46-3.8 2.17-4.25 4.3H4.45zm14.15 0c-.45-2.13-2.11-3.84-4.25-4.3l.35-3.25c3.95.49 7.06 3.6 7.55 7.55h-3.65z'/%3E%3C/svg%3E`;
+
+    async function getSmartIcon(targetUrl) {
+        if (!targetUrl || targetUrl.includes('placeholder')) return GLOBE_ICON;
+        let domain = "";
+        try { domain = new URL(targetUrl).hostname; } catch (e) { domain = targetUrl; }
+
+        // 并联第一梯队（最快、最清晰）
+        const tier1 = [
+            `https://favicon.im/?url=${domain}&size=64`,
+            `https://favicon.vemetric.com/${domain}&size=64&format=png`,
+            `https://favicon.is/${domain}?larger=true`
+        ];
+        // 并联第二梯队（稳定性补丁）
+        const tier2 = [
+            `https://faviconsnap.com/api/favicon?url=${domain}`,
+            `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+            `https://api.afmax.cn/so/ico/index.php?r=${targetUrl}`
+        ];
+
+        const checkImage = (url) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => (img.width > 1) ? resolve(url) : reject();
+            img.onerror = reject;
+            img.src = url;
+        });
+
+        try {
+            return await Promise.any(tier1.map(checkImage));
+        } catch (e) {
+            try {
+                return await Promise.any(tier2.map(checkImage));
+            } catch (e2) {
+                return GLOBE_ICON; // 最终兜底
+            }
+        }
+    }
+
     const grads = [
         'linear-gradient(to right, #0f0c29,#302b63,#24243e)',
         'linear-gradient(to right, #667db6,#0082c8,#667db6)',
@@ -167,12 +206,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function createCard(l) {
+function createCard(l) {
         const card = document.createElement('div');
         card.className = 'link-card'; card.draggable = true;
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
-        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;
+
+        // 初始化：如果已有图标且不是谷歌的，用旧的；否则先用地球占位
+        const initialIcon = (l.icon && !l.icon.includes('google.com')) ? l.icon : GLOBE_ICON;
+        
+        card.innerHTML = `
+            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+            <img src="${initialIcon}" class="site-icon">
+            <h3>${l.title}</h3>
+        `;
+
+        const img = card.querySelector('.site-icon');
+        
+        // 核心逻辑：如果图片加载失败，触发智能并联抓取
+        img.onerror = async function() {
+            if (this.src === GLOBE_ICON) return;
+            this.src = await getSmartIcon(l.url);
+        };
+
+        // 如果是新站或原本存的是谷歌图标，主动跑一次并联抓取来更新清晰度
+        if (!l.icon || l.icon.includes('google.com')) {
+            getSmartIcon(l.url).then(iconUrl => { if(iconUrl) img.src = iconUrl; });
+        }
+
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
 
@@ -275,17 +336,18 @@ document.addEventListener('DOMContentLoaded', function() {
         else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
 
-    document.getElementById('in-url').oninput = function() {
+document.getElementById('in-url').oninput = async function() {
         const val = this.value.trim();
         const prevImg = document.getElementById('prev-img');
-        if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
-        try {
-            const domain = new URL(val).hostname;
-            const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-            const tempImg = new Image(); tempImg.src = iconUrl;
-            tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
-            tempImg.onerror = () => { prevImg.src = ''; prevImg.classList.remove('loaded'); };
-        } catch (e) { }
+        if (!val || !val.startsWith('http')) { 
+            prevImg.src = ''; 
+            prevImg.classList.remove('loaded'); 
+            return; 
+        }
+        // 使用并联竞速模式获取图标预览
+        const fastIcon = await getSmartIcon(val);
+        prevImg.src = fastIcon;
+        prevImg.classList.add('loaded');
     };
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
@@ -411,11 +473,19 @@ function renderCatAdmin() {
             apiReq('deleteSubCategory', { parentCategory: parent, oldSubCategory: sub });
         }
     };
-    document.getElementById('link-form').onsubmit = async function(e) {
-        e.preventDefault(); const data = Object.fromEntries(new FormData(this));
+document.getElementById('link-form').onsubmit = async function(e) {
+        e.preventDefault(); 
+        const data = Object.fromEntries(new FormData(this));
         if (!data.category) return alert("请选择一个分类！");
-        data.icon = document.getElementById('prev-img').src;
-        if(await apiReq('save', { link: data })) document.getElementById('modal-link').style.display = 'none';
+        
+        // 提交前再次确认图标链接，如果是空或者加载失败，尝试最后抓取一次
+        const currentPreview = document.getElementById('prev-img').src;
+        data.icon = (currentPreview && currentPreview !== window.location.href) ? currentPreview : await getSmartIcon(data.url);
+        
+        if(await apiReq('save', { link: data })) {
+            document.getElementById('modal-link').style.display = 'none';
+            await fetchData(); // 保存后刷新数据以显示新图标
+        }
     };
 
     document.getElementById('btn-top').onclick = () => window.scrollTo({top:0, behavior:'smooth'});
