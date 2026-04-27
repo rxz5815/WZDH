@@ -173,18 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
         
-        // 国内Favicon 图标
-let iconSrc = l.icon;
-if (iconSrc.includes('google.com')) {
-    try {
-        const domain = new URL(l.url).hostname;
-        iconSrc = `https://api.iowen.cn/favicon/${domain}.ico`;
-    } catch(e) {
-        iconSrc = `https://api.iowen.cn/favicon/github.com.ico`;
-    }
-}
-
-card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${iconSrc}" onerror="this.src='https://api.iowen.cn/favicon/github.com.ico'"><h3>${l.title}</h3>`;       
+        // Favicon 图标
+card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;    
         // 结束
         
         card.onclick = () => window.open(l.url, '_blank');
@@ -295,7 +285,7 @@ card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
         try {
             const domain = new URL(val).hostname;
-            const iconUrl = `https://api.iowen.cn/favicon/${domain}.ico`;
+            const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
             const tempImg = new Image(); tempImg.src = iconUrl;
             tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
             tempImg.onerror = () => { prevImg.src = ''; prevImg.classList.remove('loaded'); };
