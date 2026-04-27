@@ -126,10 +126,24 @@ async function fetchData() {
                 const url = e.dataTransfer.getData('text/plain');
                 const idx = allLinks.findIndex(l => l.url === url);
                 if (idx > -1) {
-                    const item = allLinks.splice(idx, 1)[0];
-                    item.category = cat;
-                    const sub = grid.dataset.sub;
-                    item.subCategory = sub !== 'all' ? sub : "";
+
+const item = allLinks.splice(idx, 1)[0];
+const oldCat = item.category; // 记录旧的大类
+item.category = cat;         // 赋予目标大类
+const sub = grid.dataset.sub; // 获取目标视图状态
+
+if (sub !== 'all') {
+    // 逻辑 A：如果拖进的是具体的子分类视图（如 B3），强制变成该子分类
+    item.subCategory = sub;
+} else {
+    // 逻辑 B：如果拖进的是“全部”视图
+    if (oldCat !== cat) {
+        // 只有跨了大类（从 A 拖到 B），才清空子分类，确保数据干净
+        item.subCategory = "";
+    }
+    // 如果是在同一个大类下的“全部”视图里挪动，则保留它原有的子分类属性（仅作排序）
+}
+                    
                     let ins = -1;
                     for (let i = allLinks.length - 1; i >= 0; i--) { if (allLinks[i].category === cat && (sub === 'all' || allLinks[i].subCategory === sub)) { ins = i + 1; break; } }
                     if (ins === -1) allLinks.push(item); else allLinks.splice(ins, 0, item);
@@ -188,10 +202,24 @@ async function fetchData() {
             if (dragUrl === l.url) return;
             const idx = allLinks.findIndex(x => x.url === dragUrl);
             if (idx === -1) return;
-            const item = allLinks.splice(idx, 1)[0];
-            item.category = l.category;
-            const sub = card.closest('.link-grid').dataset.sub;
-            if (sub !== 'all') item.subCategory = sub;
+            
+const item = allLinks.splice(idx, 1)[0];
+const oldCat = item.category;           // 记录旧大类
+const targetCat = l.category;           // 目标卡片所属的大类
+const grid = card.closest('.link-grid');
+const sub = grid.dataset.sub;           // 目标视图状态
+
+item.category = targetCat;              // 赋予新大类
+if (sub !== 'all') {
+    // 逻辑 A：如果在子分类视图下操作，更新子分类
+    item.subCategory = sub;
+} else {
+    // 逻辑 B：如果在“全部”视图下跨大类移动，清空子分类
+    if (oldCat !== targetCat) {
+        item.subCategory = "";
+    }
+}
+            
             allLinks.splice(allLinks.findIndex(x => x.url === l.url), 0, item);
             render(); 
             await apiAdminAction('updateLinksOrder', { link: allLinks });
