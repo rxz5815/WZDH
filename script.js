@@ -3,64 +3,58 @@ document.addEventListener('DOMContentLoaded', function() {
     let categoryOrder = [];
     let activeSubFilters = {}; 
     let currentEngine = "https://www.baidu.com/s?wd=";
-    
+    let isSavingOrder = false; // 【新增】保存锁，防止请求冲突
+
     const yearEl = document.getElementById('current-year');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-    // =========================================================
-    // 1. 基础配置：高清小地球 & 竞速抓取函数
-    // =========================================================
+    // --- [1. 基础配置：高清小地球 & 竞速抓取] ---
     const GLOBE_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7.06-3.6-7.55-7.55H5.4c.45 2.13 2.11 3.84 4.25 4.3l.35 3.25zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm6.65-5.35c-.49 3.95-3.6 7.06-7.55 7.55l.35-3.25c2.14-.46 3.8-2.17 4.25-4.3h2.95zM4.45 11.45c.49-3.95 3.6-7.06 7.55-7.55l-.35 3.25c-2.14.46-3.8 2.17-4.25 4.3H4.45zm14.15 0c-.45-2.13-2.11-3.84-4.25-4.3l.35-3.25c3.95.49 7.06 3.6 7.55 7.55h-3.65z'/%3E%3C/svg%3E`;
 
     async function getSmartIcon(targetUrl) {
         if (!targetUrl || targetUrl.includes('placeholder')) return GLOBE_ICON;
         let domain = "";
         try { domain = new URL(targetUrl).hostname; } catch (e) { domain = targetUrl; }
-        const tier1 = [`https://favicon.im/?url=${domain}&size=64`, `https://favicon.vemetric.com/${domain}&size=64&format=png`, `https://favicon.is/${domain}?larger=true` ];
-        const tier2 = [`https://faviconsnap.com/api/favicon?url=${domain}`, `https://icons.duckduckgo.com/ip3/${domain}.ico`, `https://api.afmax.cn/so/ico/index.php?r=${targetUrl}` ];
-        const checkImage = (url) => new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => (img.width > 1) ? resolve(url) : reject();
-            img.onerror = reject;
-            img.src = url;
-        });
-        try { return await Promise.any(tier1.map(checkImage)); } catch (e) {
-            try { return await Promise.any(tier2.map(checkImage)); } catch (e2) { return GLOBE_ICON; }
-        }
+        const t1 = [`https://favicon.im/?url=${domain}&size=64`, `https://favicon.vemetric.com/${domain}&size=64&format=png`, `https://favicon.is/${domain}?larger=true` ];
+        const t2 = [`https://faviconsnap.com/api/favicon?url=${domain}`, `https://icons.duckduckgo.com/ip3/${domain}.ico`, `https://api.afmax.cn/so/ico/index.php?r=${targetUrl}` ];
+        const check = (url) => new Promise((res, rej) => { const i = new Image(); i.onload = () => (i.width > 1) ? res(url) : rej(); i.onerror = rej; i.src = url; });
+        try { return await Promise.any(t1.map(check)); } catch (e) { try { return await Promise.any(t2.map(check)); } catch (e2) { return GLOBE_ICON; } }
     }
 
-    // =========================================================
-    // 2. 核心双函数：管理请求 vs 自动修复
-    // =========================================================
+    // --- [2. 核心函数拆分] ---
 
-    // 函数 A：手动管理请求（增删改、拖拽）。没密码会弹窗，操作成功会刷新页面。
+    // 【管理专用】用于手动操作，会弹窗，成功后本地数据即真相，不立即fetch
     async function apiAdminAction(action, data) {
         let pwd = sessionStorage.getItem('auth_pwd_v9') || prompt("管理密码:");
         if (!pwd) return false;
+        isSavingOrder = true; // 加锁
         try {
             const res = await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ...data, password: pwd, action }) });
             if (res.ok) {
                 sessionStorage.setItem('auth_pwd_v9', pwd);
-                await fetchData(); // 管理操作完成后强制同步最新数据
+                // 拖拽排序后，我们直接信任本地 render，不重新 fetch（防止 KV 延迟导致跳回）
+                if (action !== 'updateLinksOrder' && action !== 'updateOrder') {
+                    await fetchData(); 
+                }
+                isSavingOrder = false;
                 return true;
             }
             if (res.status === 401) { alert("密码错误！"); sessionStorage.removeItem('auth_pwd_v9'); }
-        } catch (e) { console.error("管理操作失败", e); }
+        } catch (e) { console.error(e); }
+        isSavingOrder = false;
         return false;
     }
 
-    // 函数 B：后台自动修复请求（修复图标）。没密码就彻底沉默，绝不弹窗。
+    // 【修复专用】仅在有权限时静默运行
     async function apiSilentRepair(linkObj) {
         const pwd = sessionStorage.getItem('auth_pwd_v9');
-        if (!pwd) return; // 没登录过（没密码）就直接跳过，不打扰访客
+        if (!pwd || isSavingOrder) return; // 没密码或正在保存排序时，禁止干扰
         try {
             await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ link: linkObj, password: pwd, action: 'save' }) });
-        } catch (e) {} // 修复失败也无所谓，不影响用户使用
+        } catch (e) {}
     }
 
-    // =========================================================
-    // 3. 页面渲染逻辑
-    // =========================================================
+    // --- [3. 渲染与拖拽逻辑 (还原并加强)] ---
 
     const grads = ['linear-gradient(to right, #0f0c29,#302b63,#24243e)',
                    'linear-gradient(to right, #667db6,#0082c8,#667db6)',
@@ -77,17 +71,12 @@ document.addEventListener('DOMContentLoaded', function() {
                    'linear-gradient(45deg, #271f30 0%, #7b4397 80%)',
                    'linear-gradient(135deg, #182c39 0%, #486a78 80%)',
                    'linear-gradient(45deg, #221d2e 0%, #614e77 80%)',
-                   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'];
-    
-    const updateBg = (val, save = true) => {
-        const bg = document.getElementById('bg-canvas');
-        if(val.startsWith('http')) bg.style.backgroundImage = `url(${val})`;
-        else bg.style.background = val;
-        if(save) localStorage.setItem('nav_bg_v18', val);
-    };
+                   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  ];
+    const updateBg = (v, s = true) => { const bg = document.getElementById('bg-canvas'); if(v.startsWith('http')) bg.style.backgroundImage = `url(${v})`; else bg.style.background = v; if(s) localStorage.setItem('nav_bg_v18', v); };
     updateBg(localStorage.getItem('nav_bg_v18') || grads[0]);
     document.getElementById('btn-toggle-bg').onclick = () => updateBg(grads[(grads.indexOf(localStorage.getItem('nav_bg_v18')) + 1) % grads.length]);
-    document.getElementById('btn-random-bg').onclick = async () => { const res = await fetch(`https://picsum.photos/1920/1080?random=${Math.random()}`); if(res.url) updateBg(res.url); };
+    document.getElementById('btn-random-bg').onclick = async () => { const r = await fetch(`https://picsum.photos/1920/1080?random=${Math.random()}`); if(r.url) updateBg(r.url); };
 
     async function fetchData() {
         try {
@@ -95,28 +84,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
             allLinks = data.links || [];
             categoryOrder = data.order || [];
-            render(); 
-            if (document.getElementById('modal-cat').style.display === 'flex') renderCatAdmin();
+            render();
         } catch (e) { render(); }
     }
     fetchData();
-
-    const catHint = document.getElementById('cat-hint');
-    const subCatHint = document.getElementById('sub-cat-hint');
-    catHint.onchange = () => updateSubCatDropdown(catHint.value);
-    function updateSubCatDropdown(catName, selectedSub = "") {
-        subCatHint.innerHTML = '<option value="">选择二级小类</option>';
-        if (!catName) return;
-        [...new Set(allLinks.filter(l => l.category === catName && l.subCategory).map(l => l.subCategory))].forEach(s => {
-            const opt = document.createElement('option'); opt.value = s; opt.textContent = s; if (s === selectedSub) opt.selected = true; subCatHint.appendChild(opt);
-        });
-    }
 
     function render() {
         const main = document.getElementById('main-content');
         const nav = document.getElementById('category-ul');
         main.innerHTML = ''; nav.innerHTML = '';
+        const catHint = document.getElementById('cat-hint');
         catHint.innerHTML = '<option value="">选择大分类</option>';
+
         const grouped = allLinks.reduce((acc, l) => {
             if (!acc[l.category]) acc[l.category] = [];
             if (l.title !== 'placeholder_hidden') acc[l.category].push(l);
@@ -131,13 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const sec = document.createElement('section'); sec.id = cat;
             const subCats = [...new Set(allLinks.filter(l => l.category === cat && l.subCategory).map(l => l.subCategory))];
             const currentSub = activeSubFilters[cat] || 'all';
-            let subFilterHtml = subCats.length > 0 ? `<div class="sub-cat-filter"><span class="sub-cat-item ${currentSub === 'all' ? 'active' : ''}" data-sub="all">全部</span>${subCats.map(s => `<span class="sub-cat-item ${currentSub === s ? 'active' : ''}" data-sub="${s}">${s}</span>`).join('')}</div>` : '';
-            sec.innerHTML = `<div class="category-header"><h2 class="category-title">${cat}</h2>${subFilterHtml}</div><div class="link-grid" data-cat="${cat}" data-sub="${currentSub}"></div>`;
+            let subHtml = subCats.length > 0 ? `<div class="sub-cat-filter"><span class="sub-cat-item ${currentSub === 'all' ? 'active' : ''}" data-sub="all">全部</span>${subCats.map(s => `<span class="sub-cat-item ${currentSub === s ? 'active' : ''}" data-sub="${s}">${s}</span>`).join('')}</div>` : '';
+            sec.innerHTML = `<div class="category-header"><h2 class="category-title">${cat}</h2>${subHtml}</div><div class="link-grid" data-cat="${cat}" data-sub="${currentSub}"></div>`;
             const grid = sec.querySelector('.link-grid');
             
             sec.querySelectorAll('.sub-cat-item').forEach(item => {
                 const switchSub = () => {
-                    if (activeSubFilters[cat] === item.dataset.sub) return;
                     activeSubFilters[cat] = item.dataset.sub;
                     sec.querySelectorAll('.sub-cat-item').forEach(i => i.classList.remove('active')); item.classList.add('active'); grid.dataset.sub = item.dataset.sub;
                     grid.querySelectorAll('.link-card').forEach(card => card.style.display = (item.dataset.sub === 'all' || card.dataset.sub === item.dataset.sub) ? '' : 'none');
@@ -148,27 +126,23 @@ document.addEventListener('DOMContentLoaded', function() {
             grid.ondragover = e => { e.preventDefault(); grid.classList.add('drag-over'); };
             grid.ondragleave = () => grid.classList.remove('drag-over');
             grid.ondrop = async (e) => {
-                grid.classList.remove('drag-over');
+                e.preventDefault(); grid.classList.remove('drag-over');
                 const url = e.dataTransfer.getData('text/plain');
-                const itemIdx = allLinks.findIndex(l => l.url === url);
-                if (itemIdx > -1) {
-                    const item = allLinks.splice(itemIdx, 1)[0];
+                const idx = allLinks.findIndex(l => l.url === url);
+                if (idx > -1) {
+                    const item = allLinks.splice(idx, 1)[0];
                     item.category = cat;
                     const sub = grid.dataset.sub;
                     item.subCategory = sub !== 'all' ? sub : "";
                     let ins = -1;
                     for (let i = allLinks.length - 1; i >= 0; i--) { if (allLinks[i].category === cat && (sub === 'all' || allLinks[i].subCategory === sub)) { ins = i + 1; break; } }
                     if (ins === -1) allLinks.push(item); else allLinks.splice(ins, 0, item);
-                    render(); 
+                    render(); // 立即渲染本地状态
                     await apiAdminAction('updateLinksOrder', { link: allLinks }); 
                 }
             };
 
-            (grouped[cat] || []).forEach(l => {
-                const card = createCard(l);
-                if (currentSub !== 'all' && l.subCategory !== currentSub) card.style.display = 'none';
-                grid.appendChild(card);
-            });
+            (grouped[cat] || []).forEach(l => grid.appendChild(createCard(l)));
             main.appendChild(sec);
         });
     }
@@ -179,13 +153,11 @@ document.addEventListener('DOMContentLoaded', function() {
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
 
-        const isGoogle = !l.icon || l.icon.includes('google.com');
-        const initialIcon = isGoogle ? GLOBE_ICON : l.icon;
-        
-        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${initialIcon}" class="site-icon"><h3>${l.title}</h3>`;
+        const isG = !l.icon || l.icon.includes('google.com');
+        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${isG ? GLOBE_ICON : l.icon}" class="site-icon"><h3>${l.title}</h3>`;
         const img = card.querySelector('.site-icon');
 
-        const tryRepair = async () => {
+        const repair = async () => {
             const better = await getSmartIcon(l.url);
             if (better && better !== GLOBE_ICON) {
                 img.src = better;
@@ -194,9 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         };
-
-        img.onerror = () => { if (img.src !== GLOBE_ICON) tryRepair(); };
-        if (isGoogle) tryRepair();
+        img.onerror = () => { if(img.src !== GLOBE_ICON) repair(); };
+        if (isG) repair();
 
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
@@ -216,16 +187,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const sub = card.closest('.link-grid').dataset.sub;
             if (sub !== 'all') item.subCategory = sub;
             allLinks.splice(allLinks.findIndex(x => x.url === l.url), 0, item);
-            render(); 
+            render(); // 立即渲染本地状态
             await apiAdminAction('updateLinksOrder', { link: allLinks });
         };
         return card;
     }
 
-    // =========================================================
-    // 4. 其他功能 (搜索、编辑、分类管理)
-    // =========================================================
-
+    // --- [4. 基础逻辑保持不变] ---
     function setupSearch(boxSel) {
         const box = document.querySelector(boxSel), inp = box.querySelector('.search-input'), engineBar = box.querySelector('.search-engines'), isModal = boxSel.includes('modal'), resultsArea = document.getElementById('modal-results-area');
         inp.addEventListener('input', function() {
@@ -253,16 +221,25 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modal-link').style.display = 'flex';
         document.getElementById('in-title').value = (l.title === 'placeholder_hidden' ? '' : l.title) || '';
         document.getElementById('in-desc').value = l.desc || '';
-        catHint.value = l.category || ''; updateSubCatDropdown(l.category || '', l.subCategory || '');
+        document.getElementById('cat-hint').value = l.category || '';
+        updateSubCatDropdown(l.category || '', l.subCategory || '');
         const urlInput = document.getElementById('in-url'), prevImg = document.getElementById('prev-img');
         urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
         if (l.icon) { prevImg.src = l.icon; prevImg.classList.add('loaded'); } else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
+    function updateSubCatDropdown(catName, selectedSub = "") {
+        const subCatHint = document.getElementById('sub-cat-hint');
+        subCatHint.innerHTML = '<option value="">选择二级小类</option>';
+        if (!catName) return;
+        [...new Set(allLinks.filter(l => l.category === catName && l.subCategory).map(l => l.subCategory))].forEach(s => {
+            const opt = document.createElement('option'); opt.value = s; opt.textContent = s; if (s === selectedSub) opt.selected = true; subCatHint.appendChild(opt);
+        });
+    }
 
     document.getElementById('in-url').oninput = async function() {
         const val = this.value.trim(), prevImg = document.getElementById('prev-img');
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
-        const fastIcon = await getSmartIcon(val); prevImg.src = fastIcon; prevImg.classList.add('loaded');
+        prevImg.src = await getSmartIcon(val); prevImg.classList.add('loaded');
     };
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
@@ -271,7 +248,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const box = document.getElementById('cat-list-box'); if (!box) return; box.innerHTML = '';
         const cats = [...new Set(allLinks.map(l => l.category))];
         let sortedCats = categoryOrder.filter(c => cats.includes(c)); cats.forEach(c => { if(!sortedCats.includes(c)) sortedCats.push(c); });
-
         sortedCats.forEach((c, idx) => {
             const row = document.createElement('div'); row.className = 'cat-admin-row'; row.draggable = true;
             row.innerHTML = `<i class="fas fa-bars drag-handle"></i><input type="text" value="${c}"><div class="row-btns"><button class="btn-mini blue" onclick="addSubCat('${c}')">+子类</button><button class="btn-mini blue" onclick="renameCat('${c}', this)">改名</button><button class="btn-mini red" onclick="deleteCat('${c}')">删除</button></div>`;
@@ -283,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 categoryOrder = newOrder; render(); renderCatAdmin(); await apiAdminAction('updateOrder', { order: categoryOrder });
             };
             box.appendChild(row);
-
             const subs = [...new Set(allLinks.filter(l => l.category === c && l.subCategory).map(l => l.subCategory))];
             if (subs.length > 0) {
                 const subBox = document.createElement('div'); subBox.className = 'sub-cat-admin-list';
