@@ -207,48 +207,48 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 function createCard(l) {
-        const card = document.createElement('div');
-        card.className = 'link-card'; card.draggable = true;
-        card.dataset.sub = l.subCategory || "";
-        if (l.desc) card.setAttribute('data-desc', l.desc);
+    const card = document.createElement('div');
+    card.className = 'link-card'; card.draggable = true;
+    card.dataset.sub = l.subCategory || "";
+    if (l.desc) card.setAttribute('data-desc', l.desc);
 
-        // [优化] 如果地址是空的或者是谷歌的，直接给小地球，不给浏览器“转圈”的机会
-        const isGoogle = !l.icon || l.icon.includes('google.com');
-        const initialIcon = isGoogle ? GLOBE_ICON : l.icon;
-        
-        card.innerHTML = `
-            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
-            <img src="${initialIcon}" class="site-icon">
-            <h3>${l.title}</h3>
-        `;
+        // 1. 初始化：谷歌地址直接转小地球，防止挂起
+    const isGoogle = !l.icon || l.icon.includes('google.com');
+    const initialIcon = isGoogle ? GLOBE_ICON : l.icon;
+    
+    card.innerHTML = `
+        <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+        <img src="${initialIcon}" class="site-icon">
+        <h3>${l.title}</h3>
+    `;
 
-        const img = card.querySelector('.site-icon');
-        
-        // [核心] 这里的逻辑负责：如果图片挂了，立即竞速抓取并【永久保存】到数据库
-        img.onerror = async function() {
-            if (this.src === GLOBE_ICON) return; 
-            const betterIcon = await getSmartIcon(l.url);
-            if (betterIcon && betterIcon !== GLOBE_ICON) {
-                this.src = betterIcon;
-                l.icon = betterIcon;
-                // 静默保存到数据库，以后再访问就不用竞速了
-                apiReq('save', { link: l }, true); 
-            } else {
-                this.src = GLOBE_ICON;
-            }
-        };
-
-        // [核心] 如果原本是谷歌链接，主动跑一次竞速，把它换成高清国内可访问的地址
-        if (isGoogle) {
-            getSmartIcon(l.url).then(iconUrl => {
-                if (iconUrl && iconUrl !== GLOBE_ICON) {
-                    img.src = iconUrl;
-                    l.icon = iconUrl;
-                    // 静默保存，下次刷新不再转圈
-                    apiReq('save', { link: l }, true); 
-                }
-            });
+    const img = card.querySelector('.site-icon');
+    
+    // 图标处理函数：判断是否为全球通用API
+    const saveIfGlobal = (url) => {
+        const globalAPIs = ['favicon.im', 'vemetric.com', 'favicon.is', 'faviconsnap.com'];
+        if (globalAPIs.some(api => url.includes(api))) {
+            l.icon = url;
+            apiReq('save', { link: l }, true); // 静默保存
         }
+    };
+
+    // 核心逻辑：加载失败或原本是谷歌链接时，触发竞速
+    img.onerror = async function() {
+        if (this.src === GLOBE_ICON) return; 
+        const betterIcon = await getSmartIcon(l.url);
+        this.src = betterIcon;
+        saveIfGlobal(betterIcon);
+    };
+
+    if (isGoogle) {
+        getSmartIcon(l.url).then(iconUrl => {
+            if (iconUrl && iconUrl !== GLOBE_ICON) {
+                img.src = iconUrl;
+                saveIfGlobal(iconUrl);
+            }
+        });
+    }
 
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
@@ -353,18 +353,18 @@ function createCard(l) {
     };
 
 document.getElementById('in-url').oninput = async function() {
-        const val = this.value.trim();
-        const prevImg = document.getElementById('prev-img');
-        if (!val || !val.startsWith('http')) { 
-            prevImg.src = ''; 
-            prevImg.classList.remove('loaded'); 
-            return; 
-        }
-        // 使用并联竞速模式获取图标预览
-        const fastIcon = await getSmartIcon(val);
-        prevImg.src = fastIcon;
-        prevImg.classList.add('loaded');
-    };
+    const val = this.value.trim();
+    const prevImg = document.getElementById('prev-img');
+    if (!val || !val.startsWith('http')) { 
+        prevImg.src = ''; 
+        prevImg.classList.remove('loaded'); 
+        return; 
+    }
+    // 添加站点时，也使用竞速预览，保证管理员看到的也是高清图
+    const fastIcon = await getSmartIcon(val);
+    prevImg.src = fastIcon;
+    prevImg.classList.add('loaded');
+};
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
 
