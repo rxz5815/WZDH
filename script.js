@@ -3,39 +3,35 @@ document.addEventListener('DOMContentLoaded', function() {
     let categoryOrder = [];
     let activeSubFilters = {}; 
     let currentEngine = "https://www.baidu.com/s?wd=";
-    let isSavingOrder = false; // 【新增】保存锁，防止请求冲突
+    let isSavingOrder = false; 
 
     const yearEl = document.getElementById('current-year');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-    // --- [1. 基础配置：高清小地球 & 竞速抓取] ---
+    // --- [1. 高清小地球 & 智能竞速] ---
     const GLOBE_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7.06-3.6-7.55-7.55H5.4c.45 2.13 2.11 3.84 4.25 4.3l.35 3.25zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm6.65-5.35c-.49 3.95-3.6 7.06-7.55 7.55l.35-3.25c2.14-.46 3.8-2.17 4.25-4.3h2.95zM4.45 11.45c.49-3.95 3.6-7.06 7.55-7.55l-.35 3.25c-2.14.46-3.8 2.17-4.25 4.3H4.45zm14.15 0c-.45-2.13-2.11-3.84-4.25-4.3l.35-3.25c3.95.49 7.06 3.6 7.55 7.55h-3.65z'/%3E%3C/svg%3E`;
 
     async function getSmartIcon(targetUrl) {
         if (!targetUrl || targetUrl.includes('placeholder')) return GLOBE_ICON;
         let domain = "";
         try { domain = new URL(targetUrl).hostname; } catch (e) { domain = targetUrl; }
+        // 优先排列国际API
         const t1 = [`https://favicon.im/?url=${domain}&size=64`, `https://favicon.vemetric.com/${domain}&size=64&format=png`, `https://favicon.is/${domain}?larger=true` ];
         const t2 = [`https://faviconsnap.com/api/favicon?url=${domain}`, `https://icons.duckduckgo.com/ip3/${domain}.ico`, `https://api.afmax.cn/so/ico/index.php?r=${targetUrl}` ];
         const check = (url) => new Promise((res, rej) => { const i = new Image(); i.onload = () => (i.width > 1) ? res(url) : rej(); i.onerror = rej; i.src = url; });
         try { return await Promise.any(t1.map(check)); } catch (e) { try { return await Promise.any(t2.map(check)); } catch (e2) { return GLOBE_ICON; } }
     }
 
-    // --- [2. 核心函数拆分] ---
-
-    // 【管理专用】用于手动操作，会弹窗，成功后本地数据即真相，不立即fetch
+    // --- [2. 请求拆分] ---
     async function apiAdminAction(action, data) {
         let pwd = sessionStorage.getItem('auth_pwd_v9') || prompt("管理密码:");
         if (!pwd) return false;
-        isSavingOrder = true; // 加锁
+        isSavingOrder = true;
         try {
             const res = await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ...data, password: pwd, action }) });
             if (res.ok) {
                 sessionStorage.setItem('auth_pwd_v9', pwd);
-                // 拖拽排序后，我们直接信任本地 render，不重新 fetch（防止 KV 延迟导致跳回）
-                if (action !== 'updateLinksOrder' && action !== 'updateOrder') {
-                    await fetchData(); 
-                }
+                if (action !== 'updateLinksOrder' && action !== 'updateOrder') await fetchData(); 
                 isSavingOrder = false;
                 return true;
             }
@@ -45,18 +41,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
 
-    // 【修复专用】仅在有权限时静默运行
     async function apiSilentRepair(linkObj) {
         const pwd = sessionStorage.getItem('auth_pwd_v9');
-        if (!pwd || isSavingOrder) return; // 没密码或正在保存排序时，禁止干扰
-        try {
-            await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ link: linkObj, password: pwd, action: 'save' }) });
-        } catch (e) {}
+        if (!pwd || isSavingOrder) return; 
+        try { await fetch('/api/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ link: linkObj, password: pwd, action: 'save' }) }); } catch (e) {}
     }
 
-    // --- [3. 渲染与拖拽逻辑 (还原并加强)] ---
-
-    const grads = ['linear-gradient(to right, #0f0c29,#302b63,#24243e)',
+    // --- [3. 渲染与图标替换逻辑] ---
+  const grads = ['linear-gradient(to right, #0f0c29,#302b63,#24243e)',
                    'linear-gradient(to right, #667db6,#0082c8,#667db6)',
                    'linear-gradient(to right, #373b44,#4286f4)',
                    'linear-gradient(to right, #355c7d,#6c5b7b,#c06c84)',
@@ -73,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
                    'linear-gradient(45deg, #221d2e 0%, #614e77 80%)',
                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                   ];
+    
     const updateBg = (v, s = true) => { const bg = document.getElementById('bg-canvas'); if(v.startsWith('http')) bg.style.backgroundImage = `url(${v})`; else bg.style.background = v; if(s) localStorage.setItem('nav_bg_v18', v); };
     updateBg(localStorage.getItem('nav_bg_v18') || grads[0]);
     document.getElementById('btn-toggle-bg').onclick = () => updateBg(grads[(grads.indexOf(localStorage.getItem('nav_bg_v18')) + 1) % grads.length]);
@@ -95,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function() {
         main.innerHTML = ''; nav.innerHTML = '';
         const catHint = document.getElementById('cat-hint');
         catHint.innerHTML = '<option value="">选择大分类</option>';
-
         const grouped = allLinks.reduce((acc, l) => {
             if (!acc[l.category]) acc[l.category] = [];
             if (l.title !== 'placeholder_hidden') acc[l.category].push(l);
@@ -137,11 +129,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     let ins = -1;
                     for (let i = allLinks.length - 1; i >= 0; i--) { if (allLinks[i].category === cat && (sub === 'all' || allLinks[i].subCategory === sub)) { ins = i + 1; break; } }
                     if (ins === -1) allLinks.push(item); else allLinks.splice(ins, 0, item);
-                    render(); // 立即渲染本地状态
+                    render(); 
                     await apiAdminAction('updateLinksOrder', { link: allLinks }); 
                 }
             };
-
             (grouped[cat] || []).forEach(l => grid.appendChild(createCard(l)));
             main.appendChild(sec);
         });
@@ -153,21 +144,26 @@ document.addEventListener('DOMContentLoaded', function() {
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
 
-        const isG = !l.icon || l.icon.includes('google.com');
-        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${isG ? GLOBE_ICON : l.icon}" class="site-icon"><h3>${l.title}</h3>`;
+        // 如果没有图标，或者还是旧的谷歌地址，先用地球
+        const needsRepair = !l.icon || l.icon.includes('google.com');
+        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${needsRepair ? GLOBE_ICON : l.icon}" class="site-icon"><h3>${l.title}</h3>`;
         const img = card.querySelector('.site-icon');
 
-        const repair = async () => {
-            const better = await getSmartIcon(l.url);
-            if (better && better !== GLOBE_ICON) {
-                img.src = better;
-                if (['favicon.im', 'vemetric.com', 'favicon.is'].some(api => better.includes(api))) {
-                    l.icon = better; apiSilentRepair(l); 
+        const repairIcon = async () => {
+            const betterUrl = await getSmartIcon(l.url);
+            if (betterUrl && betterUrl !== GLOBE_ICON) {
+                img.src = betterUrl;
+                // --- 核心逻辑：只有国际加速API才允许存入数据库 ---
+                const isGlobal = ['favicon.im', 'vemetric.com', 'favicon.is'].some(api => betterUrl.includes(api));
+                if (isGlobal) {
+                    l.icon = betterUrl; 
+                    apiSilentRepair(l); 
                 }
             }
         };
-        img.onerror = () => { if(img.src !== GLOBE_ICON) repair(); };
-        if (isG) repair();
+
+        img.onerror = () => { if(img.src !== GLOBE_ICON) repairIcon(); };
+        if (needsRepair) repairIcon();
 
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
@@ -187,13 +183,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const sub = card.closest('.link-grid').dataset.sub;
             if (sub !== 'all') item.subCategory = sub;
             allLinks.splice(allLinks.findIndex(x => x.url === l.url), 0, item);
-            render(); // 立即渲染本地状态
+            render(); 
             await apiAdminAction('updateLinksOrder', { link: allLinks });
         };
         return card;
     }
 
-    // --- [4. 基础逻辑保持不变] ---
+    // --- [4. 搜索与弹窗逻辑] ---
     function setupSearch(boxSel) {
         const box = document.querySelector(boxSel), inp = box.querySelector('.search-input'), engineBar = box.querySelector('.search-engines'), isModal = boxSel.includes('modal'), resultsArea = document.getElementById('modal-results-area');
         inp.addEventListener('input', function() {
@@ -213,7 +209,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     setupSearch('.main-search'); setupSearch('.modal-inner-search');
-
     document.body.addEventListener('click', e => { if(e.target.classList.contains('engine')) { document.querySelectorAll('.engine').forEach(x => x.classList.remove('active')); e.target.classList.add('active'); currentEngine = e.target.dataset.url; } });
     document.querySelectorAll('.modal-overlay').forEach(el => el.onclick = () => { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); document.getElementById('modal-results-area').innerHTML = ''; });
 
