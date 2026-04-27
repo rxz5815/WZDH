@@ -248,38 +248,71 @@ async function fetchData() {
 window.openEdit = (l = {}) => {
         const modal = document.getElementById('modal-link');
         modal.style.display = 'flex';
-
-        // 1. 动态改标题：判断是“添加”还是“编辑”
+        
+        // 区分“添加”与“编辑”标题
         const isEdit = l.title && l.title !== 'placeholder_hidden';
         modal.querySelector('.modal-title-center').textContent = isEdit ? "编辑站点" : "添加站点";
 
-        // 2. 填充内容
         document.getElementById('in-title').value = isEdit ? l.title : '';
         document.getElementById('in-desc').value = l.desc || '';
         
-        // 3. 核心：强制触发分类联动，确保小分类下拉框有数据
-        const catSelect = document.getElementById('cat-hint');
-        catSelect.value = l.category || '';
-        updateSubCatDropdown(l.category || '', l.subCategory || '');
-        
-        const urlInput = document.getElementById('in-url'), prevImg = document.getElementById('prev-img');
+        const urlInput = document.getElementById('in-url');
         urlInput.value = (l.url && !l.url.includes('placeholder')) ? l.url : '';
+
+        // --- 分类联动核心修复 ---
+        const catSelect = document.getElementById('cat-hint');
         
-        if (l.icon) { 
-            prevImg.src = l.icon; 
-            prevImg.classList.add('loaded'); 
+        if (isEdit) {
+            // 编辑模式：设置存好的分类
+            catSelect.value = l.category || '';
+            updateSubCatDropdown(l.category || '', l.subCategory || '');
+        } else {
+            // 添加模式：
+            // 如果下拉框有大分类（比如第一个是“1常用”），我们就默认选中它
+            // 这样用户一进来就能看到对应的二级小类
+            if (catSelect.options.length > 1) {
+                catSelect.selectedIndex = 1; // 选中第一个有效的大分类（跳过“请选择”）
+                updateSubCatDropdown(catSelect.value, '');
+            } else {
+                catSelect.value = '';
+                updateSubCatDropdown('', '');
+            }
+        }
+        
+        // 图标预览
+        const prevImg = document.getElementById('prev-img');
+        if (l.icon && l.icon !== '') { 
+            prevImg.src = l.icon; prevImg.classList.add('loaded'); 
         } else { 
-            prevImg.src = ''; 
-            prevImg.classList.remove('loaded'); 
+            prevImg.src = ''; prevImg.classList.remove('loaded'); 
         }
     };
-    function updateSubCatDropdown(catName, selectedSub = "") {
+        
+
+function updateSubCatDropdown(catName, selectedSub = "") {
         const subCatHint = document.getElementById('sub-cat-hint');
+        if (!subCatHint) return;
+        
         subCatHint.innerHTML = '<option value="">选择二级小类</option>';
         if (!catName) return;
-        [...new Set(allLinks.filter(l => l.category === catName && l.subCategory).map(l => l.subCategory))].forEach(s => {
-            const opt = document.createElement('option'); opt.value = s; opt.textContent = s; if (s === selectedSub) opt.selected = true; subCatHint.appendChild(opt);
-        });
+
+        // 优化过滤逻辑：
+        // 只要 l.category 匹配，且 l.subCategory 有值，就认为是有效的子分类
+        // 不管它是真实站点还是 placeholder_hidden 占位符
+        const subs = [...new Set(allLinks
+            .filter(l => l.category === catName && l.subCategory && l.subCategory.trim() !== "")
+            .map(l => l.subCategory)
+        )];
+
+        if (subs.length > 0) {
+            subs.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                if (s === selectedSub) opt.selected = true;
+                subCatHint.appendChild(opt);
+            });
+        }
     }
 
     document.getElementById('in-url').oninput = async function() {
