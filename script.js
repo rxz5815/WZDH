@@ -174,9 +174,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (l.desc) card.setAttribute('data-desc', l.desc);
         
         // 国内Favicon 图标
-card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;
-       
+let iconSrc = l.icon;
+if (iconSrc.includes('google.com')) {
+    try {
+        const domain = new URL(l.url).hostname;
+        iconSrc = `https://api.iowen.cn/favicon/${domain}.ico`;
+    } catch(e) {
+        iconSrc = `https://api.iowen.cn/favicon/github.com.ico`;
+    }
+}
+
+card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${iconSrc}" onerror="this.src='https://api.iowen.cn/favicon/github.com.ico'"><h3>${l.title}</h3>`;       
         // 结束
+        
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
 
@@ -318,7 +328,7 @@ function renderCatAdmin() {
                 </div>`;
             
             row.ondragstart = (e) => { e.dataTransfer.setData('cat-idx', idx); row.style.opacity = '0.5'; };
-            row.ondragend = () => row.style.opacity = '1';
+            row。ondragend = () => row.style.opacity = '1';
             row.ondragover = e => e.preventDefault();
             row.ondrop = async (e) => {
                 e.preventDefault();
