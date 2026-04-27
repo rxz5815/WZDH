@@ -167,37 +167,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    
-function createCard(l) {
+    function createCard(l) {
         const card = document.createElement('div');
-        card.className = 'link-card'; 
-        card.draggable = true;
+        card.className = 'link-card'; card.draggable = true;
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
-
-        // --- 核心修复：图标纠正与多级兜底 ---
-        let domain = "";
-        try { domain = new URL(l.url).hostname; } catch(e) { domain = "github.com"; }
         
-        let iconSrc = l.icon;
-        // 如果数据库里存的是被墙的 Google，或者是之前测试的不稳的 iowen，一律重定向到 UOMG
-        if (!iconSrc || iconSrc.includes('google.com') || iconSrc.includes('iowen.cn')) {
-            iconSrc = `https://api.uomg.com/api/get.favicon?url=${l.url}`;
-        }
+// 自动将旧数据中的谷歌链接替换为国内接口，并设置国内备用地址
+const safeIcon = (l.icon && l.icon.includes('google.com')) 
+    ? `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png` 
+    : (l.icon || `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png`);
 
-        // 定义两级逃生路线
-        const fallback1 = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-        const fallback2 = `https://api.uomg.com/api/get.favicon?url=https://github.com`; // 最终兜底图
+card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${safeIcon}" onerror="this.src='https://favicon.im/${l.url}'"><h3>${l.title}</h3>`;
 
-        card.innerHTML = `
-            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
-            <img src="${iconSrc}" 
-                 onerror="if(this.src!=='${fallback1}'){this.src='${fallback1}'}else{this.src='${fallback2}'}">
-            <h3>${l.title}</h3>`;
-                    
-        // Favicon 图标
-card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;    
-        // 结束
         
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
@@ -294,30 +276,39 @@ card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">
         document.getElementById('in-desc').value = l.desc || '';
         catHint.value = l.category || '';
         updateSubCatDropdown(l.category || '', l.subCategory || '');
-        const urlInput = document.getElementById('in-url');
-        const prevImg = document.getElementById('prev-img');
-        urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
-        if (l.icon && l.icon !== '') { prevImg.src = l.icon; prevImg.classList.add('loaded'); }
-        else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
+        
+const urlInput = document.getElementById('in-url');
+const prevImg = document.getElementById('prev-img');
+urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
+// 如果是谷歌链接，预览时直接显示国内接口的图片
+let displayIcon = l.icon;
+if (displayIcon && displayIcon.includes('google.com')) {
+    displayIcon = `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png`;
+}
+if (displayIcon && displayIcon !== '') { prevImg.src = displayIcon; prevImg.classList.add('loaded'); }
+else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
 
-document.getElementById('in-url').oninput = function() {
+    document.getElementById('in-url').oninput = function() {
         const val = this.value.trim();
         const prevImg = document.getElementById('prev-img');
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
-        try {
-            // 首选国内优选接口
-            const iconUrl = `https://api.uomg.com/api/get.favicon?url=${val}`;
-            const tempImg = new Image();
-            tempImg.src = iconUrl;
-            tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
-            
-            // 如果首选失败，尝试备用接口 (favicon.rss.ink)
-            tempImg.onerror = () => { 
-                const domain = new URL(val).hostname;
-                prevImg.src = `https://favicon.rss.ink/v1/${btoa(val)}`; 
-            };
-        } catch (e) { }
+
+        
+try {
+    const domain = new URL(val).hostname;
+    // 更换为国内知名的 iowen 接口
+    const iconUrl = `https://api.iowen.cn/favicon/${domain}.png`;
+    const tempImg = new Image(); tempImg.src = iconUrl;
+    tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
+    tempImg.onerror = () => { 
+        // 第一个失败后，尝试第二个国内可访问的 favicon.im 接口
+        prevImg.src = `https://favicon.im/${val}`; 
+        prevImg.classList.add('loaded');
+    };
+} catch (e) { }
+
+        
     };
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
