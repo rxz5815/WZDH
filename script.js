@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (l.desc) card.setAttribute('data-desc', l.desc);
         
         // 国内Favicon 图标
-card。innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;
+card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;
        
         // 结束
         card.onclick = () => window.open(l.url, '_blank');
