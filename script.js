@@ -84,14 +84,24 @@ async function fetchData() {
         }
     } catch (e) { render(); }
 }
-    fetchData();
+fetchData();
 
-    function render() {
+    // --- [核心修复：在这里统一绑定联动事件，确保绝对有效] ---
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'cat-hint') {
+            updateSubCatDropdown(e.target.value);
+        }
+    });
+
+function render() {
         const main = document.getElementById('main-content');
         const nav = document.getElementById('category-ul');
         main.innerHTML = ''; nav.innerHTML = '';
-        const catHint = document.getElementById('cat-hint');
-        catHint.innerHTML = '<option value="">选择大分类</option>';
+        
+        // 修正：直接获取元素并清空，不要加 const 重新声明
+        const catSelectElement = document.getElementById('cat-hint');
+        if (catSelectElement) catSelectElement.innerHTML = '<option value="">选择大分类</option>';
+    
         const grouped = allLinks.reduce((acc, l) => {
             if (!acc[l.category]) acc[l.category] = [];
             if (l.title !== 'placeholder_hidden') acc[l.category].push(l);
@@ -249,17 +259,18 @@ window.openEdit = (l = {}) => {
         const modal = document.getElementById('modal-link');
         modal.style.display = 'flex';
         
-        // 区分“添加”与“编辑”标题
+        // 1. 区分“添加”与“编辑”标题
         const isEdit = l.title && l.title !== 'placeholder_hidden';
         modal.querySelector('.modal-title-center').textContent = isEdit ? "编辑站点" : "添加站点";
 
+        // 2. 填充内容
         document.getElementById('in-title').value = isEdit ? l.title : '';
         document.getElementById('in-desc').value = l.desc || '';
         
         const urlInput = document.getElementById('in-url');
         urlInput.value = (l.url && !l.url.includes('placeholder')) ? l.url : '';
 
-        // --- 分类联动核心修复 ---
+        // 3. 分类联动核心修复
         const catSelect = document.getElementById('cat-hint');
         
         if (isEdit) {
@@ -267,11 +278,9 @@ window.openEdit = (l = {}) => {
             catSelect.value = l.category || '';
             updateSubCatDropdown(l.category || '', l.subCategory || '');
         } else {
-            // 添加模式：
-            // 如果下拉框有大分类（比如第一个是“1常用”），我们就默认选中它
-            // 这样用户一进来就能看到对应的二级小类
+            // 添加模式：默认选中第一个分类，并立刻把该分类的小类加载出来
             if (catSelect.options.length > 1) {
-                catSelect.selectedIndex = 1; // 选中第一个有效的大分类（跳过“请选择”）
+                catSelect.selectedIndex = 1; 
                 updateSubCatDropdown(catSelect.value, '');
             } else {
                 catSelect.value = '';
@@ -279,7 +288,7 @@ window.openEdit = (l = {}) => {
             }
         }
         
-        // 图标预览
+        // 4. 图标预览
         const prevImg = document.getElementById('prev-img');
         if (l.icon && l.icon !== '') { 
             prevImg.src = l.icon; prevImg.classList.add('loaded'); 
@@ -287,7 +296,6 @@ window.openEdit = (l = {}) => {
             prevImg.src = ''; prevImg.classList.remove('loaded'); 
         }
     };
-        
 
 function updateSubCatDropdown(catName, selectedSub = "") {
         const subCatHint = document.getElementById('sub-cat-hint');
