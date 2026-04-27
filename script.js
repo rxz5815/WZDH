@@ -225,11 +225,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const urlInput = document.getElementById('in-url');
         urlInput.value = (l.url && !l.url.includes('placeholder')) ? l.url : '';
         
-        if (catHint) {
-            catHint.value = l.category || '';
-            if (!isEdit && catHint.options.length > 1 && !l.category) {
-                catHint.selectedIndex = 1;
+if (catHint) {
+            if (isEdit) {
+                // 编辑模式：还原保存时的分类
+                catHint.value = l.category || '';
+            } else {
+                // 添加模式：重置为“选择大分类”
+                catHint.selectedIndex = 0;
             }
+            // 刷新二级下拉框（如果大类是空的，二级也会变回默认）
             updateSubCatDropdown(catHint.value, l.subCategory || '');
         }
 
