@@ -96,9 +96,14 @@ body.is-searching .category-header, body.is-searching #sticky-nav { display: non
     height: 40px; 
     border-radius: 8px; 
     margin-bottom: 10px; 
-    background: #fff;      /* 核心修改：强制白色背景，解决 GPT 等深色图标看不见的问题 */
-    padding: 3px;         /* 增加一点内边距，让图标不紧贴边缘，更美观 */
-    object-fit: contain;   /* 确保图标比例正常不拉伸 */
+    /* 核心 1：增加白色背景，解决 GPT 等透明图标在深色背景下“消失”的问题 */
+    background-color: #ffffff; 
+    /* 核心 2：增加微量内边距，让图标不紧贴边框，更像手机 App 图标 */
+    padding: 4px;
+    /* 核心 3：防模糊处理。尽量保持小图标的清晰边缘 */
+    image-rendering: -webkit-optimize-contrast;
+    object-fit: contain;
+    box-sizing: border-box;
 }
 
 .link-card h3 { font-size: 13px; font-weight: 300; }
