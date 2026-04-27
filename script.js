@@ -71,15 +71,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn-toggle-bg').onclick = () => updateBg(grads[(grads.indexOf(localStorage.getItem('nav_bg_v18')) + 1) % grads.length]);
     document.getElementById('btn-random-bg').onclick = async () => { const r = await fetch(`https://picsum.photos/1920/1080?random=${Math.random()}`); if(r.url) updateBg(r.url); };
 
-    async function fetchData() {
-        try {
-            const res = await fetch('/api/links');
-            const data = await res.json();
-            allLinks = data.links || [];
-            categoryOrder = data.order || [];
-            render();
-        } catch (e) { render(); }
-    }
+async function fetchData() {
+    try {
+        const res = await fetch('/api/links');
+        const data = await res.json();
+        allLinks = data.links || [];
+        categoryOrder = data.order || [];
+        render();
+        // 关键修复：如果分类管理弹窗正开着，获取新数据后立即刷新弹窗内的列表
+        if (document.getElementById('modal-cat').style.display === 'flex') {
+            renderCatAdmin();
+        }
+    } catch (e) { render(); }
+}
     fetchData();
 
     function render() {
@@ -133,8 +137,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     await apiAdminAction('updateLinksOrder', { link: allLinks }); 
                 }
             };
-            (grouped[cat] || []).forEach(l => grid.appendChild(createCard(l)));
-            main.appendChild(sec);
+(grouped[cat] || []).forEach(l => {
+    const card = createCard(l);
+    // 关键修复：如果当前分类处于子分类筛选模式，隐藏不属于该子分类的卡片
+    if (currentSub !== 'all' && l.subCategory !== currentSub) {
+        card.style.display = 'none';
+    }
+    grid.appendChild(card);
+});            main.appendChild(sec);
         });
     }
 
