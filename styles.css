@@ -92,19 +92,15 @@ body.is-searching .category-header, body.is-searching #sticky-nav { display: non
 }
 /* 网站小图标 favicon */
 .link-card img { 
-    width: 40px; 
-    height: 40px; 
-    border-radius: 8px; 
-    margin-bottom: 10px; 
-    /* 核心 1：增加白色背景，解决 GPT 等透明图标在深色背景下“消失”的问题 */
-    background-color: #ffffff; 
-    /* 核心 2：增加微量内边距，让图标不紧贴边框，更像手机 App 图标 */
-    padding: 4px;
-    /* 核心 3：防模糊处理。尽量保持小图标的清晰边缘 */
-    image-rendering: -webkit-optimize-contrast;
-    object-fit: contain;
-    box-sizing: border-box;
+  width: 40px; 
+  height: 40px; 
+  border-radius: 10px; 
+  margin-bottom: 10px; 
+  image-rendering: -webkit-optimize-contrast;
+  object-fit: contain;
+  box-sizing: border-box;
 }
+
 
 .link-card h3 { font-size: 13px; font-weight: 300; }
 .card-del { position: absolute; top: -5px; right: -5px; background: #444; width: 24px; height: 24px; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 12px; z-index: 100; transition: 0.2s; }
