@@ -167,12 +167,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function createCard(l) {
+    
+function createCard(l) {
         const card = document.createElement('div');
-        card.className = 'link-card'; card.draggable = true;
+        card.className = 'link-card'; 
+        card.draggable = true;
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
+
+        // --- 核心修复：图标纠正与多级兜底 ---
+        let domain = "";
+        try { domain = new URL(l.url).hostname; } catch(e) { domain = "github.com"; }
         
+        let iconSrc = l.icon;
+        // 如果数据库里存的是被墙的 Google，或者是之前测试的不稳的 iowen，一律重定向到 UOMG
+        if (!iconSrc || iconSrc.includes('google.com') || iconSrc.includes('iowen.cn')) {
+            iconSrc = `https://api.uomg.com/api/get.favicon?url=${l.url}`;
+        }
+
+        // 定义两级逃生路线
+        const fallback1 = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+        const fallback2 = `https://api.uomg.com/api/get.favicon?url=https://github.com`; // 最终兜底图
+
+        card.innerHTML = `
+            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
+            <img src="${iconSrc}" 
+                 onerror="if(this.src!=='${fallback1}'){this.src='${fallback1}'}else{this.src='${fallback2}'}">
+            <h3>${l.title}</h3>`;
+                    
         // Favicon 图标
 card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;    
         // 结束
@@ -279,16 +301,22 @@ card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">
         else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
 
-    document.getElementById('in-url').oninput = function() {
+document.getElementById('in-url').oninput = function() {
         const val = this.value.trim();
         const prevImg = document.getElementById('prev-img');
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
         try {
-            const domain = new URL(val).hostname;
-            const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-            const tempImg = new Image(); tempImg.src = iconUrl;
+            // 首选国内优选接口
+            const iconUrl = `https://api.uomg.com/api/get.favicon?url=${val}`;
+            const tempImg = new Image();
+            tempImg.src = iconUrl;
             tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
-            tempImg.onerror = () => { prevImg.src = ''; prevImg.classList.remove('loaded'); };
+            
+            // 如果首选失败，尝试备用接口 (favicon.rss.ink)
+            tempImg.onerror = () => { 
+                const domain = new URL(val).hostname;
+                prevImg.src = `https://favicon.rss.ink/v1/${btoa(val)}`; 
+            };
         } catch (e) { }
     };
 
