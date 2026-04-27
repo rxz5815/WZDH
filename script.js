@@ -167,23 +167,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-function createCard(l) {
+    function createCard(l) {
         const card = document.createElement('div');
         card.className = 'link-card'; card.draggable = true;
         card.dataset.sub = l.subCategory || "";
         if (l.desc) card.setAttribute('data-desc', l.desc);
-        
-        // 1. 定义域名
-        const domain = new URL(l.url).hostname;
-        // 2. 首选高清接口
-        const safeIcon = `https://favicon.im/${l.url}`;
-
-        // 3. 渲染 HTML (onerror 指向国内 iowen 彩色地球保底)
-        card.innerHTML = `
-            <div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div>
-            <img src="${safeIcon}" onerror="this.onerror=null;this.src='https://api.iowen.cn/favicon/${domain}.png';">
-            <h3>${l.title}</h3>`;
-        
+        card.innerHTML = `<div class="card-del" onclick="deleteSite(event, '${l.url}')">&times;</div><img src="${l.icon}" onerror="this.src='https://www.google.com/s2/favicons?domain=github.com&sz=64'"><h3>${l.title}</h3>`;
         card.onclick = () => window.open(l.url, '_blank');
         card.oncontextmenu = (e) => { e.preventDefault(); openEdit(l); };
 
@@ -279,42 +268,25 @@ function createCard(l) {
         document.getElementById('in-desc').value = l.desc || '';
         catHint.value = l.category || '';
         updateSubCatDropdown(l.category || '', l.subCategory || '');
-        
-const urlInput = document.getElementById('in-url');
-const prevImg = document.getElementById('prev-img');
-urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
-// 如果是谷歌链接，预览时直接显示国内接口的图片
-let displayIcon = l.icon;
-if (displayIcon && displayIcon.includes('google.com')) {
-    displayIcon = `https://api.iowen.cn/favicon/${new URL(l.url).hostname}.png`;
-}
-if (displayIcon && displayIcon !== '') { prevImg.src = displayIcon; prevImg.classList.add('loaded'); }
-else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
+        const urlInput = document.getElementById('in-url');
+        const prevImg = document.getElementById('prev-img');
+        urlInput.value = (l.url?.includes('placeholder') ? '' : l.url) || '';
+        if (l.icon && l.icon !== '') { prevImg.src = l.icon; prevImg.classList.add('loaded'); }
+        else { prevImg.src = ''; prevImg.classList.remove('loaded'); }
     };
 
-document.getElementById('in-url').oninput = function() {
+    document.getElementById('in-url').oninput = function() {
         const val = this.value.trim();
         const prevImg = document.getElementById('prev-img');
         if (!val || !val.startsWith('http')) { prevImg.src = ''; prevImg.classList.remove('loaded'); return; }
         try {
             const domain = new URL(val).hostname;
-            // 1. 预览首选高清接口
-            const iconUrl = `https://favicon.im/${val}`;
-            const tempImg = new Image(); 
-            tempImg.src = iconUrl;
-            tempImg.onload = () => { 
-                prevImg.src = iconUrl; 
-                prevImg.classList.add('loaded'); 
-            };
-            tempImg.onerror = () => { 
-                // 2. 高清加载失败（或超时），保底使用国内 iowen 接口
-                const fallbackUrl = `https://api.iowen.cn/favicon/${domain}.png`;
-                prevImg.src = fallbackUrl;
-                prevImg.classList.add('loaded');
-            };
+            const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+            const tempImg = new Image(); tempImg.src = iconUrl;
+            tempImg.onload = () => { prevImg.src = iconUrl; prevImg.classList.add('loaded'); };
+            tempImg.onerror = () => { prevImg.src = ''; prevImg.classList.remove('loaded'); };
         } catch (e) { }
     };
-
 
     document.getElementById('btn-cat-admin').onclick = () => { renderCatAdmin(); document.getElementById('modal-cat').style.display = 'flex'; };
 
